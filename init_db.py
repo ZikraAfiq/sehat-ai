@@ -3,7 +3,7 @@ import psycopg2
 # ---------- Database Connection ----------
 
 DB_CONFIG = {
-    "dbname": "todos_db",
+    "dbname": "sehat",
     "user": "postgres",
     "password": 2108,
     "host": "localhost",
