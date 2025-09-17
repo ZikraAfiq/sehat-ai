@@ -137,9 +137,9 @@ def fetch_reminders():
 def home():
     return render_template("index.html")
 
-@app.route("/signup")
-def signup():
-    return render_template("signup.html")
+#@app.route("/signup")
+#def signup():
+#    return render_template("signup.html")
 
 @app.route("/login")
 def login():

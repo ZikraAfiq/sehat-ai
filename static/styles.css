@@ -15,29 +15,41 @@ body {
 
 /* Design system colors */
 :root {
-    --primary: #2563eb; /* blue-600 */
-    --primary-light: #60a5fa; /* blue-400 */
-    --primary-dark: #1d4ed8; /* blue-700 */
-    --primary-foreground: #ffffff;
-    --secondary: #f1f5f9; /* slate-100 */
-    --secondary-foreground: #475569; /* slate-600 */
-    --muted: #f8fafc; /* slate-50 */
-    --muted-foreground: #64748b; /* slate-500 */
-    --accent: #0891b2; /* cyan-600 */
-    --accent-foreground: #ffffff;
-    --destructive: #dc2626; /* red-600 */
-    --success: #16a34a; /* green-600 */
-    --border: #e2e8f0; /* slate-200 */
-    --input: #ffffff;
-    --ring: #60a5fa; /* blue-400 */
-    --background: #ffffff;
-    --foreground: #0f172a; /* slate-900 */
-    --card: #ffffff;
-    --card-foreground: #0f172a;
-    --radius: 8px;
-    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --primary: #08997B; /* teal green */
+  --primary-light: #4FC3F7; /* secondary sky blue */
+  --primary-dark: #046d56; /* darker teal */
+  --primary-foreground: #ffffff;
+
+  --secondary: #4FC3F7; /* secondary */
+  --secondary-foreground: #212121; /* dark text */
+
+  --muted: #F5F5F5; /* background */
+  --muted-foreground: #64748b; /* keep subtle slate for muted text */
+
+  --accent: #AED581; /* calm green accent */
+  --accent-foreground: #212121;
+
+  --destructive: #dc2626; /* red */
+  --success: #16a34a; /* green (for success alerts) */
+
+  --border: #e0e0e0; /* lighter gray border */
+  --input: #ffffff;
+
+  --ring: #4FC3F7; /* secondary as focus ring */
+  --background: #F5F5F5; /* page background */
+  --foreground: #212121; /* main text */
+
+  --card: #ffffff;
+  --card-foreground: #212121;
+
+  --radius: 8px;
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
+            0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+               0 4px 6px -4px rgba(0, 0, 0, 0.1);
 }
+
+
 
 /* Header styles */
 .header {
@@ -622,4 +634,154 @@ body {
 
 .hidden {
     display: none !important;
+}
+
+/* Popup Modal */
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: var(--card);
+  padding: 2rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--secondary-foreground);
+}
+
+/* Popup Modal */
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: var(--card);
+  padding: 2rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--secondary-foreground);
+}
+
+/* Appointment Notification */
+#appointment-notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 1rem 1.5rem;
+  border-radius: var(--radius);
+  background: var(--success);
+  color: white;
+  box-shadow: var(--shadow-lg);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  opacity: 0;
+  transform: translateY(100%);
+  transition: all 0.4s ease-in-out;
+}
+
+#appointment-notification.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Popup Modal */
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: var(--card);
+  padding: 2rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 1rem; right: 1rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--secondary-foreground);
+}
+
+/* Appointment Notification */
+#appointment-notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 1rem 1.5rem;
+  border-radius: var(--radius);
+  background: var(--success);
+  color: white;
+  box-shadow: var(--shadow-lg);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  opacity: 0;
+  transform: translateY(100%);
+  transition: all 0.4s ease-in-out;
+}
+
+#appointment-notification.show {
+  opacity: 1;
+  transform: translateY(0);
 }
