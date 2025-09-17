@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import os
 from dotenv import load_dotenv
@@ -41,8 +41,17 @@ def get_db_connection():
         print(f"❌ Could not connect to the database: {e}")
         return None
 
-# ---------- API Routes ----------
+# ---------- Routes ----------
 
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+
+
+
+
+# ---------- API Routes ----------
 ## Chatbot Endpoint
 @app.route('/api/chat', methods=['POST'])
 def chat():
