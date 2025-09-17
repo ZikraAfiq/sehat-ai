@@ -125,7 +125,6 @@ async function sendMessage() {
         showTypingIndicator();
         
         // Send message to backend
-        const data = await fetchWithErrorHandling(`${API_BASE_URL}/chat`, {
         const data = await fetchWithErrorHandling(`/chat`, {
             method: 'POST',
             body: JSON.stringify({ message })
@@ -199,7 +198,6 @@ function handleKeyPress(event) {
 async function loadDoctors() {
     try {
         setLoading(true);
-        const data = await fetchWithErrorHandling(`${API_BASE_URL}/doctors`);
         const data = await fetchWithErrorHandling(`/doctors`);
         doctors = data;
         populateDoctorSelect();
@@ -289,7 +287,6 @@ async function handleAppointmentSubmit() {
             throw new Error('Please fill in all required fields');
         }
         
-        await fetchWithErrorHandling(`${API_BASE_URL}/appointments`, {
         await fetchWithErrorHandling(`/appointments`, {
             method: 'POST',
             body: JSON.stringify(appointmentData)
