@@ -1,33 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contact Us - Medsync.ai</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/styles.css">
-</head>
-<body>
-    <header class="header">
-        <div class="header-content">
-            <a href="index.html" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-hospital"></i>
-                </div>
-                <span>Medsync.ai</span>
-            </a>
-            <nav class="nav-links">
-                <a href="signup.html" class="nav-link">Signup</a>
-                <a href="login.html" class="nav-link">Login</a>
-                <a href="contact.html" class="nav-link">Contact</a>
-            </nav>
-        </div>
-    </header>
+{% extends "base.html" %}
 
-    <div class="container">
+{% block title %}Contact Us - Sehat.AI{% endblock %}
+
+{% block content %}
+  <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 20px;">
         <div style="max-width: 768px; margin: 2rem auto;">
             <div class="card">
                 <div class="card-header">
@@ -65,6 +41,5 @@
                 </div>
             </div>
         </div>
-    </div>
-</body>
-</html>
+  </div>
+{% endblock %}

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Management - Medsync.ai</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-hospital"></i>
+                </div>
+                <span>Medsync.ai</span>
+            </div>
+            <nav class="nav-links">
+                <a href="{{ url_for('clinic_dashboard') }}" class="nav-link">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </a>
+                <a href="{{ url_for('clinic_patients') }}" class="nav-link active">
+                    <i class="fas fa-users"></i> Patients
+                </a>
+                <a href="{{ url_for('clinic_appointments') }}" class="nav-link">
+                    <i class="fas fa-calendar-alt"></i> Appointments
+                </a>
+                <a href="{{ url_for('home') }}" class="nav-link">
+                    <i class="fas fa-arrow-left"></i> Patient Portal
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="flex justify-between items-center" style="margin-bottom: 2rem;">
+            <div>
+                <h1 style="font-size: 2.5rem; font-weight: 700; color: var(--foreground); margin-bottom: 0.5rem;">Patient Management</h1>
+                <p style="color: var(--muted-foreground); font-size: 1.1rem;">View and manage patient information, appointments, and medications</p>
+            </div>
+            <div>
+                <input type="text" id="search-patients" placeholder="Search patients..." class="form-control" style="width: 300px;">
+            </div>
+        </div>
+
+        <!-- Patient Details Modal -->
+        <div id="patient-modal" class="modal hidden">
+            <div class="modal-content" style="max-width: 800px; width: 90%;">
+                <span class="modal-close" onclick="closePatientModal()">&times;</span>
+                <div id="patient-details-content">
+                    <div style="text-align: center; padding: 2rem; color: var(--muted-foreground);">Loading patient details...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-users"></i>
+                    All Patients
+                </div>
+                <div class="card-description">Complete list of registered patients with their information</div>
+            </div>
+            <div class="card-content">
+                <div style="overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Patient ID</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Name</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Email</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Phone</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Date of Birth</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Appointments</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Medications</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patients-table">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 2rem; color: var(--muted-foreground); font-style: italic;">Loading patients...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="loading-indicator hidden">
+        <div class="loading-spinner"></div>
+        <span>Loading...</span>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <i class="fas fa-check-circle"></i>
+        <span id="notification-text"></span>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        const API_BASE_URL = 'http://localhost:5001/api';
+        let allPatients = [];
+
+        // Fetch data from API
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include',
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Fetch error:', error);
+                return null;
+            }
+        }
+
+        // Load all patients
+        async function loadPatients() {
+            setLoading(true);
+            const patients = await fetchData('/clinic/patients');
+            const tbody = document.getElementById('patients-table');
+            
+            if (!patients) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--destructive);">Failed to load patients</td></tr>';
+                setLoading(false);
+                return;
+            }
+
+            if (patients.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--muted-foreground); font-style: italic;">No patients found</td></tr>';
+                setLoading(false);
+                return;
+            }
+
+            allPatients = patients;
+            displayPatients(patients);
+            setLoading(false);
+        }
+
+        // Display patients in table
+        function displayPatients(patients) {
+            const tbody = document.getElementById('patients-table');
+            
+            tbody.innerHTML = patients.map(patient => `
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 1rem; vertical-align: top; font-weight: 600;">#${patient.patient_id}</td>
+                    <td style="padding: 1rem; vertical-align: top;">
+                        <strong>${patient.first_name} ${patient.last_name}</strong>
+                    </td>
+                    <td style="padding: 1rem; vertical-align: top;">${patient.email}</td>
+                    <td style="padding: 1rem; vertical-align: top;">${patient.phone || 'N/A'}</td>
+                    <td style="padding: 1rem; vertical-align: top;">${patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A'}</td>
+                    <td style="padding: 1rem; vertical-align: top; text-align: center;">
+                        <span style="background: var(--primary-light); color: var(--primary-foreground); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">${patient.total_appointments || 0}</span>
+                    </td>
+                    <td style="padding: 1rem; vertical-align: top; text-align: center;">
+                        <span style="background: var(--accent); color: var(--accent-foreground); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">${patient.total_medications || 0}</span>
+                    </td>
+                    <td style="padding: 1rem; vertical-align: top;">
+                        <button class="btn btn-primary" onclick="viewPatientDetails(${patient.patient_id})" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
+                            <i class="fas fa-eye"></i> View Details
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Search patients
+        function searchPatients() {
+            const searchTerm = document.getElementById('search-patients').value.toLowerCase();
+            const filteredPatients = allPatients.filter(patient => 
+                patient.first_name.toLowerCase().includes(searchTerm) ||
+                patient.last_name.toLowerCase().includes(searchTerm) ||
+                patient.email.toLowerCase().includes(searchTerm) ||
+                (patient.phone && patient.phone.includes(searchTerm))
+            );
+            displayPatients(filteredPatients);
+        }
+
+        // View patient details
+        async function viewPatientDetails(patientId) {
+            const modal = document.getElementById('patient-modal');
+            const content = document.getElementById('patient-details-content');
+            
+            modal.classList.remove('hidden');
+            content.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--muted-foreground);">Loading patient details...</div>';
+            
+            try {
+                const patientData = await fetchData(`/clinic/patients/${patientId}`);
+                
+                if (!patientData) {
+                    content.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--destructive);">Failed to load patient details</div>';
+                    return;
+                }
+
+                const { patient, appointments, medications } = patientData;
+                
+                content.innerHTML = `
+                    <div style="margin-bottom: 2rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: 600; color: var(--foreground); margin-bottom: 1rem;">
+                            <i class="fas fa-user"></i> ${patient.first_name} ${patient.last_name}
+                        </h2>
+                        <div class="grid grid-2" style="gap: 1rem; margin-bottom: 2rem;">
+                            <div>
+                                <p><strong>Email:</strong> ${patient.email}</p>
+                                <p><strong>Phone:</strong> ${patient.phone || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p><strong>Date of Birth:</strong> ${patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A'}</p>
+                                <p><strong>Patient ID:</strong> #${patient.patient_id}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-2" style="gap: 2rem;">
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--foreground); margin-bottom: 1rem;">
+                                <i class="fas fa-calendar-alt"></i> Appointments (${appointments.length})
+                            </h3>
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                ${appointments.length > 0 ? appointments.map(apt => `
+                                    <div style="border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                            <strong>Dr. ${apt.doctor_first_name} ${apt.doctor_last_name}</strong>
+                                            <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; ${getStatusStyle(apt.status)}">${apt.status}</span>
+                                        </div>
+                                        <p style="color: var(--muted-foreground); font-size: 0.875rem; margin-bottom: 0.25rem;">${apt.specialization}</p>
+                                        <p style="color: var(--muted-foreground); font-size: 0.875rem; margin-bottom: 0.25rem;">${new Date(apt.appointment_date).toLocaleString()}</p>
+                                        ${apt.reason ? `<p style="color: var(--muted-foreground); font-size: 0.875rem;"><strong>Reason:</strong> ${apt.reason}</p>` : ''}
+                                    </div>
+                                `).join('') : '<p style="color: var(--muted-foreground); font-style: italic;">No appointments found</p>'}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--foreground); margin-bottom: 1rem;">
+                                <i class="fas fa-pills"></i> Medications (${medications.length})
+                            </h3>
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                ${medications.length > 0 ? medications.map(med => `
+                                    <div style="border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem;">
+                                        <strong>${med.medication_name}</strong>
+                                        <p style="color: var(--muted-foreground); font-size: 0.875rem; margin-bottom: 0.25rem;"><strong>Dosage:</strong> ${med.dosage}</p>
+                                        <p style="color: var(--muted-foreground); font-size: 0.875rem; margin-bottom: 0.25rem;"><strong>Frequency:</strong> ${med.frequency}</p>
+                                        ${med.reminder_times ? `<p style="color: var(--muted-foreground); font-size: 0.875rem;"><strong>Reminders:</strong> ${JSON.parse(med.reminder_times).join(', ')}</p>` : ''}
+                                    </div>
+                                `).join('') : '<p style="color: var(--muted-foreground); font-style: italic;">No medications found</p>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading patient details:', error);
+                content.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--destructive);">Failed to load patient details</div>';
+            }
+        }
+
+        // Close patient modal
+        function closePatientModal() {
+            document.getElementById('patient-modal').classList.add('hidden');
+        }
+
+        // Get status badge styling
+        function getStatusStyle(status) {
+            switch(status) {
+                case 'scheduled':
+                    return 'background: #dbeafe; color: #1e40af;';
+                case 'completed':
+                    return 'background: #dcfce7; color: #166534;';
+                case 'cancelled':
+                    return 'background: #fee2e2; color: #dc2626;';
+                default:
+                    return 'background: var(--muted); color: var(--foreground);';
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            const searchInput = document.getElementById('search-patients');
+            if (searchInput) {
+                searchInput.addEventListener('input', searchPatients);
+            }
+        }
+
+        // Initialize page
+        function initPage() {
+            loadPatients();
+            setupEventListeners();
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

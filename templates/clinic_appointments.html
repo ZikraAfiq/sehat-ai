@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointment Management - Medsync.ai</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-hospital"></i>
+                </div>
+                <span>Medsync.ai</span>
+            </div>
+            <nav class="nav-links">
+                <a href="{{ url_for('clinic_dashboard') }}" class="nav-link">
+                    <i class="fas fa-chart-line"></i> Dashboard
+                </a>
+                <a href="{{ url_for('clinic_patients') }}" class="nav-link">
+                    <i class="fas fa-users"></i> Patients
+                </a>
+                <a href="{{ url_for('clinic_appointments') }}" class="nav-link active">
+                    <i class="fas fa-calendar-alt"></i> Appointments
+                </a>
+                <a href="{{ url_for('home') }}" class="nav-link">
+                    <i class="fas fa-arrow-left"></i> Patient Portal
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="flex justify-between items-center" style="margin-bottom: 2rem;">
+            <div>
+                <h1 style="font-size: 2.5rem; font-weight: 700; color: var(--foreground); margin-bottom: 0.5rem;">Appointment Management</h1>
+                <p style="color: var(--muted-foreground); font-size: 1.1rem;">View and manage all patient appointments</p>
+            </div>
+            <div class="flex" style="gap: 1rem;">
+                <select id="status-filter" class="form-control" style="width: 150px;">
+                    <option value="">All Status</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+                <input type="date" id="date-filter" class="form-control" style="width: 200px;">
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-3" style="margin-bottom: 2rem;">
+            <div class="card" style="transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                <div class="card-content" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: white; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--foreground); line-height: 1;" id="today-count">-</div>
+                        <div style="font-size: 0.875rem; color: var(--muted-foreground); margin-top: 0.25rem;">Today</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                <div class="card-content" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: white; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--foreground); line-height: 1;" id="scheduled-count">-</div>
+                        <div style="font-size: 0.875rem; color: var(--muted-foreground); margin-top: 0.25rem;">Scheduled</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                <div class="card-content" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: white; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 2rem; font-weight: 700; color: var(--foreground); line-height: 1;" id="completed-count">-</div>
+                        <div style="font-size: 0.875rem; color: var(--muted-foreground); margin-top: 0.25rem;">Completed</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    All Appointments
+                </div>
+                <div class="card-description">Complete list of patient appointments with management options</div>
+            </div>
+            <div class="card-content">
+                <div style="overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">ID</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Patient</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Doctor</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Date & Time</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Reason</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Status</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="appointments-table">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 2rem; color: var(--muted-foreground); font-style: italic;">Loading appointments...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="loading-indicator hidden">
+        <div class="loading-spinner"></div>
+        <span>Loading...</span>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <i class="fas fa-check-circle"></i>
+        <span id="notification-text"></span>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        const API_BASE_URL = 'http://localhost:5001/api';
+        let allAppointments = [];
+
+        // Fetch data from API
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include',
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Fetch error:', error);
+                return null;
+            }
+        }
+
+        // Load all appointments
+        async function loadAppointments() {
+            setLoading(true);
+            const appointments = await fetchData('/clinic/appointments');
+            const tbody = document.getElementById('appointments-table');
+            
+            if (!appointments) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--destructive);">Failed to load appointments</td></tr>';
+                setLoading(false);
+                return;
+            }
+
+            if (appointments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--muted-foreground); font-style: italic;">No appointments found</td></tr>';
+                setLoading(false);
+                return;
+            }
+
+            allAppointments = appointments;
+            displayAppointments(appointments);
+            updateStatistics(appointments);
+            setLoading(false);
+        }
+
+        // Display appointments in table
+        function displayAppointments(appointments) {
+            const tbody = document.getElementById('appointments-table');
+            
+            tbody.innerHTML = appointments.map(apt => `
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 1rem; vertical-align: top; font-weight: 600;">#${apt.appointment_id}</td>
+                    <td style="padding: 1rem; vertical-align: top;">
+                        <strong>${apt.patient_first_name} ${apt.patient_last_name}</strong><br>
+                        <small style="color: var(--muted-foreground)">${apt.patient_email}</small><br>
+                        <small style="color: var(--muted-foreground)">${apt.patient_phone || 'No phone'}</small>
+                    </td>
+                    <td style="padding: 1rem; vertical-align: top;">
+                        <strong>Dr. ${apt.doctor_first_name} ${apt.doctor_last_name}</strong><br>
+                        <small style="color: var(--muted-foreground)">${apt.specialization}</small>
+                    </td>
+                    <td style="padding: 1rem; vertical-align: top;">
+                        <strong>${new Date(apt.appointment_date).toLocaleDateString()}</strong><br>
+                        <small style="color: var(--muted-foreground)">${new Date(apt.appointment_date).toLocaleTimeString()}</small>
+                    </td>
+                    <td style="padding: 1rem; vertical-align: top; max-width: 200px;">
+                        ${apt.reason ? `<span style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${apt.reason}">${apt.reason}</span>` : '<span style="color: var(--muted-foreground); font-style: italic;">No reason provided</span>'}
+                    </td>
+                    <td style="padding: 1rem; vertical-align: top;">
+                        <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; text-transform: capitalize; ${getStatusStyle(apt.status)}">${apt.status}</span>
+                    </td>
+                    <td style="padding: 1rem; vertical-align: top;">
+                        <select onchange="updateAppointmentStatus(${apt.appointment_id}, this.value)" style="background: var(--muted); color: var(--foreground); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: var(--radius); font-size: 0.875rem; cursor: pointer;">
+                            <option value="scheduled" ${apt.status === 'scheduled' ? 'selected' : ''}>Scheduled</option>
+                            <option value="completed" ${apt.status === 'completed' ? 'selected' : ''}>Completed</option>
+                            <option value="cancelled" ${apt.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                        </select>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Update statistics
+        function updateStatistics(appointments) {
+            const today = new Date().toISOString().split('T')[0];
+            
+            const todayCount = appointments.filter(apt => 
+                apt.appointment_date.startsWith(today)
+            ).length;
+            
+            const scheduledCount = appointments.filter(apt => 
+                apt.status === 'scheduled'
+            ).length;
+            
+            const completedCount = appointments.filter(apt => 
+                apt.status === 'completed'
+            ).length;
+
+            document.getElementById('today-count').textContent = todayCount;
+            document.getElementById('scheduled-count').textContent = scheduledCount;
+            document.getElementById('completed-count').textContent = completedCount;
+        }
+
+        // Filter appointments
+        function filterAppointments() {
+            const statusFilter = document.getElementById('status-filter').value;
+            const dateFilter = document.getElementById('date-filter').value;
+            
+            let filteredAppointments = allAppointments;
+            
+            if (statusFilter) {
+                filteredAppointments = filteredAppointments.filter(apt => 
+                    apt.status === statusFilter
+                );
+            }
+            
+            if (dateFilter) {
+                filteredAppointments = filteredAppointments.filter(apt => 
+                    apt.appointment_date.startsWith(dateFilter)
+                );
+            }
+            
+            displayAppointments(filteredAppointments);
+        }
+
+        // Update appointment status
+        async function updateAppointmentStatus(appointmentId, newStatus) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/clinic/appointments/${appointmentId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (response.ok) {
+                    // Update local data
+                    const appointmentIndex = allAppointments.findIndex(apt => apt.appointment_id === appointmentId);
+                    if (appointmentIndex !== -1) {
+                        allAppointments[appointmentIndex].status = newStatus;
+                        filterAppointments(); // Re-apply current filters
+                        updateStatistics(allAppointments);
+                    }
+                    
+                    showNotification('Appointment status updated successfully');
+                } else {
+                    throw new Error('Failed to update appointment status');
+                }
+            } catch (error) {
+                console.error('Error updating appointment status:', error);
+                showNotification('Failed to update appointment status', false);
+            }
+        }
+
+        // Get status badge styling
+        function getStatusStyle(status) {
+            switch(status) {
+                case 'scheduled':
+                    return 'background: #dbeafe; color: #1e40af;';
+                case 'completed':
+                    return 'background: #dcfce7; color: #166534;';
+                case 'cancelled':
+                    return 'background: #fee2e2; color: #dc2626;';
+                default:
+                    return 'background: var(--muted); color: var(--foreground);';
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            const statusFilter = document.getElementById('status-filter');
+            const dateFilter = document.getElementById('date-filter');
+            
+            if (statusFilter) {
+                statusFilter.addEventListener('change', filterAppointments);
+            }
+            
+            if (dateFilter) {
+                dateFilter.addEventListener('change', filterAppointments);
+            }
+        }
+
+        // Initialize page
+        function initPage() {
+            loadAppointments();
+            setupEventListeners();
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>

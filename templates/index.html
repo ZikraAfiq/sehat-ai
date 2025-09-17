@@ -1,32 +1,8 @@
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Documents</title>
-  <title>HealthCare Assistant - Your Trusted Healthcare Companion</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
+{% extends "base.html" %}
 
-  <header class="header">
-    <div class="header-content">
-      <a href="index.html" class="logo">
-        <div class="logo-icon">
-          <i class="fas fa-hospital"></i>
-        </div>
-        <span>HealthCare AI Assistant</span>
-      </a>
-      <nav class="nav-links">
-        <a href="{{ url_for('signup') }}" class="nav-link">Signup</a>
-        <a href="{{ url_for('login') }}" class="nav-link">Login</a>
-        <a href="{{ url_for('contact') }}" class="nav-link">Contact</a>
-        <a href="{{ url_for('appointments') }}" class="nav-link">Appointments</a>
-      </nav>
-    </div>
-  </header>
+{% block title %}Medsync.ai - Your Trusted Healthcare Companion{% endblock %}
+
+{% block content %}
 
 <div class="container">
     <div class="nav-buttons">
@@ -148,6 +124,15 @@
     <span id="appointment-notification-text"></span>
   </div>
 
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
-</body>
-</html>
+  <!-- Loading Indicator -->
+  <div id="loading-indicator" class="loading-indicator hidden">
+    <div class="loading-spinner"></div>
+    <span>Loading...</span>
+  </div>
+
+  <!-- Notification -->
+  <div id="notification" class="notification">
+    <i class="fas fa-check-circle"></i>
+    <span id="notification-text"></span>
+  </div>
+{% endblock %}

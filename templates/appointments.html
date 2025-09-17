@@ -1,82 +1,107 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Appointments</title>
+{% extends "base.html" %}
+
+{% block title %}Appointments - {{ super() }}{% endblock %}
+
+{% block extra_css %}
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f4f6f9;
+    .appointments-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
     }
-    h1 {
-      color: #333;
-    }
-    table {
+    .appointments-table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 20px;
       background: white;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    th, td {
+    .appointments-table th,
+    .appointments-table td {
       padding: 12px;
       border: 1px solid #ddd;
       text-align: left;
     }
-    th {
+    .appointments-table th {
       background: #007bff;
       color: white;
     }
-    tr:nth-child(even) {
+    .appointments-table tr:nth-child(even) {
       background: #f9f9f9;
     }
   </style>
-</head>
-<body>
-  <h1>My Appointments</h1>
-  <table id="appointmentsTable">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Date & Time</th>
-        <th>Reason</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Data will be inserted here by JS -->
-    </tbody>
-  </table>
+{% endblock %}
 
+{% block content %}
+  <div class="appointments-container">
+    <h1>Your Appointments</h1>
+    <table id="appointmentsTable" class="appointments-table">
+      <thead>
+        <tr>
+          <th>Appointment ID</th>
+          <th>Date & Time</th>
+          <th>Reason</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Data will be inserted here by JS -->
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
   <script>
-    async function loadAppointments() {
-      try {
-        const response = await fetch("http://127.0.0.1:5001/api/appointments"); // use your Flask API
-        const data = await response.json();
+    document.addEventListener('DOMContentLoaded', function() {
+      async function loadAppointments() {
+        try {
+          const response = await fetch("{{ url_for('handle_appointments') }}");
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
 
-        const tableBody = document.querySelector("#appointmentsTable tbody");
-        tableBody.innerHTML = ""; // clear before inserting
+          const tableBody = document.querySelector("#appointmentsTable tbody");
+          if (!tableBody) {
+            console.error("Table body not found");
+            return;
+          }
+          
+          tableBody.innerHTML = ""; // Clear existing content
 
-        data.forEach(appt => {
-          const row = `
-            <tr>
-              <td>${appt.appointment_id}</td>
-              <td>${new Date(appt.appointment_date).toLocaleString()}</td>
-              <td>${appt.reason || '-'}</td>
-              <td>${appt.status}</td>
-            </tr>
-          `;
-          tableBody.innerHTML += row;
-        });
-      } catch (error) {
-        console.error("Error loading appointments:", error);
-      }
+          if (Array.isArray(data) && data.length > 0) {
+            data.forEach(appt => {
+              const row = document.createElement('tr');
+              row.innerHTML = `
+                <td>${appt.appointment_id || 'N/A'}</td>
+                <td>${appt.appointment_date ? new Date(appt.appointment_date).toLocaleString() : 'N/A'}</td>
+                <td>${appt.reason || '-'}</td>
+                <td>${appt.status}</td>
+              `;
+              tableBody.appendChild(row);
+            });
+          } else {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="4" style="text-align: center;">No appointments found</td>';
+            tableBody.appendChild(row);
+          }
+        } catch (error) {
+          console.error("Error loading appointments:", error);
+          const tableBody = document.querySelector("#appointmentsTable tbody");
+          if (tableBody) {
+            tableBody.innerHTML = `
+              <tr>
+                <td colspan="4" style="text-align: center; color: red;">
+                  Error loading appointments. Please try again later.
+                </td>
+              </tr>`;
+          }
+        }
     }
 
-    // Load appointments on page load
-    window.onload = loadAppointments;
+      // Initial load
+      loadAppointments();
+    });
   </script>
-</body>
-</html>
+{% endblock %}

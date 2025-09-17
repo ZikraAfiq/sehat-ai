@@ -43,9 +43,9 @@ def get_db_connection():
 
 # ---------- Routes ----------
 
-@app.route("/")
+@app.route('/')
 def home():
-    return render_template("index.html")
+    return render_template('index.html', title='HealthCare Assistant')
 
 @app.route("/signup")
 def signup():
@@ -218,7 +218,7 @@ def handle_medications():
                 )
                 new_id = cur.fetchone()['prescription_id']
                 conn.commit()
-            return jsonify({"message": "Medication added successfully!", "id": new_id}), 201
+            return jsonify({"message": "Medication added successfully!", "id": new_id, "medication_id": new_id}), 201
             
     except Exception as e:
         conn.rollback()
