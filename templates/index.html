@@ -1,206 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medsync.ai - Your Trusted Healthcare Companion</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sehat.AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <a href="index.html" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-hospital"></i>
-                </div>
-                <span>Medsync.ai</span>
-            </a>
-            <nav class="nav-links">
-                <a href="signup.html" class="nav-link">Signup</a>
-                <a href="login.html" class="nav-link">Login</a>
-                <a href="contact.html" class="nav-link">Contact</a>
-            </nav>
-        </div>
-    </header>
+  <header>Sehat.AI</header>
 
-    <div class="container">
-        <div class="nav-buttons">
-            <button class="nav-button active" id="chat-btn" onclick="showSection('chat')">
-                <i class="fas fa-comment-medical"></i>
-                <span>Chat with AI</span>
-            </button>
-            <button class="nav-button" id="appointment-btn" onclick="showSection('appointment')">
-                <i class="fas fa-calendar-check"></i>
-                <span>Appointments</span>
-            </button>
-            <button class="nav-button" id="medication-btn" onclick="showSection('medication')">
-                <i class="fas fa-pills"></i>
-                <span>Medications</span>
-            </button>
-        </div>
-
-        <div id="chat-section" class="section active">
-            <div class="card chat-container">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fas fa-robot"></i>
-                        <span>AI Health Assistant</span>
-                    </div>
-                    <div class="card-description">
-                        Get instant help with symptoms, appointments, and medication questions
-                    </div>
-                </div>
-                <div class="chat-messages" id="chat-messages">
-                    <div class="message bot">
-                        <div class="message-content">
-                            Hello! I'm your healthcare assistant. I can help you with symptom questions, appointment booking, and medication reminders. How can I assist you today?
-                            <div class="suggestions">
-                                <button class="suggestion-btn" onclick="setSuggestion('I have a headache')"><i class="fas fa-head-side-cough"></i> Ask about symptoms</button>
-                                <button class="suggestion-btn" onclick="setSuggestion('Book an appointment')"><i class="fas fa-calendar-plus"></i> Book an appointment</button>
-                                <button class="suggestion-btn" onclick="setSuggestion('Set medication reminder')"><i class="fas fa-bell"></i> Set medication reminder</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div id="typing-indicator" class="message-typing hidden">
-                    <i class="fas fa-robot"></i> AI Assistant is typing
-                    <div class="typing-dots">
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
-                        <div class="typing-dot"></div>
-                    </div>
-                </div>
-                <div class="chat-input">
-                    <input type="text" id="chat-input" placeholder="Type your health concern or question..." onkeypress="handleKeyPress(event)">
-                    <button onclick="sendMessage()">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="appointment-section" class="section hidden">
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fas fa-calendar-plus"></i>
-                        <span>Book an Appointment</span>
-                    </div>
-                </div>
-                <div class="card-content">
-                    <form id="appointment-form" onsubmit="handleAppointmentSubmit(); return false;">
-                        <div class="form-group">
-                            <label for="doctor-select"><i class="fas fa-user-md"></i> Select Doctor</label>
-                            <select id="doctor-select" class="form-control" required>
-                                <option value="">Loading doctors...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="appointment-date"><i class="fas fa-calendar-day"></i> Date</label>
-                            <input type="date" id="appointment-date" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="appointment-time"><i class="fas fa-clock"></i> Time</label>
-                            <input type="time" id="appointment-time" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="reason"><i class="fas fa-stethoscope"></i> Reason for Visit</label>
-                            <textarea id="reason" class="form-control" rows="3" placeholder="Please describe your symptoms or reason for the appointment"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-check-circle"></i> Book Appointment
-                        </button>
-                    </form>
-                    
-                    <div class="mt-6">
-                        <h3><i class="fas fa-users"></i> Available Doctors</h3>
-                        <div id="doctors-container" class="grid grid-3 mt-4"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="medication-section" class="section hidden">
-            <div class="grid grid-2">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <i class="fas fa-prescription-bottle-alt"></i>
-                            <span>Your Medications</span>
-                        </div>
-                    </div>
-                    <div class="card-content">
-                        <div id="medications-container"></div>
-                    </div>
-                </div>
-                
-                <div class="space-y-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-title">
-                                <i class="fas fa-bell"></i>
-                                <span>Set Medication Reminder</span>
-                            </div>
-                        </div>
-                        <div class="card-content">
-                            <form id="medication-form" onsubmit="handleMedicationSubmit(); return false;">
-                                <div class="form-group">
-                                    <label for="medication-name"><i class="fas fa-pills"></i> Medication Name</label>
-                                    <input type="text" id="medication-name" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="medication-dosage"><i class="fas fa-weight"></i> Dosage</label>
-                                    <input type="text" id="medication-dosage" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="medication-time"><i class="fas fa-clock"></i> Time</label>
-                                    <input type="time" id="medication-time" class="form-control" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>
-                                        <input type="checkbox" id="medication-daily"> <i class="fas fa-sync-alt"></i> Repeat daily
-                                    </label>
-                                </div>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-bell"></i> Set Reminder
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-title">
-                                <i class="fas fa-history"></i>
-                                <span>Reminder History</span>
-                            </div>
-                        </div>
-                        <div class="card-content">
-                            <div id="reminder-history">
-                                <p class="text-center">No reminders set yet</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <main id="main">
+    <!-- Start Screen -->
+    <div class="start-screen" id="startScreen">
+      <div class="suggestions" id="startSuggestions">
+        <button onclick="insertPrompt('I have a stomachache')">🤒 Ask about symptoms</button>
+        <button onclick="insertPrompt('Book me a health check appointment')">📅 Book appointment</button>
+        <button onclick="insertPrompt('Remind me to take medicine at 9PM')">💊 Medication reminder</button>
+      </div>
+      <div class="start-input">
+        <input type="text" id="startInput" placeholder="Ask Sehat.AI..." />
+        <button id="startBtn">Send</button>
+      </div>
     </div>
 
-    <div id="notification" class="notification">
-        <i class="fas fa-check-circle"></i>
-        <span id="notification-text"></span>
+    <!-- Chatbox -->
+    <div class="chat-box hidden" id="chatBox">
+      <div class="messages" id="messages"></div>
+
+      <!-- Suggestions stay visible -->
+      <div class="suggestions" id="chatSuggestions">
+        <button onclick="insertPrompt('I have a stomachache')">🤒 Ask about symptoms</button>
+        <button onclick="insertPrompt('Book me a health check appointment')">📅 Book appointment</button>
+        <button onclick="insertPrompt('Remind me to take medicine at 9PM')">💊 Medication reminder</button>
+      </div>
+
+      <div class="chat-input">
+        <input type="text" id="userInput" placeholder="Type your health concern or question..." />
+        <button id="sendBtn">➤</button>
+      </div>
     </div>
 
-    <!-- Loading Indicator -->
-    <div id="loading-indicator" class="loading-indicator hidden">
-        <div class="loading-spinner"></div>
-        <span>Loading...</span>
-    </div>
+    <!-- Combined Appointment & Medication Pill -->
+    <section class="status-pill">
+      <div class="status-half appointment">
+        <h3>📅 Next Appointment</h3>
+        <p><strong>Tomorrow, 10:00 AM</strong><br>with <strong>Dr. Ali</strong></p>
+      </div>
+      <div class="status-half medication">
+        <h3>💊 Next Medication</h3>
+        <p><strong>Later, 3:00 PM</strong><br>2x Loratadine</p>
+      </div>
+    </section>
+  </main>
 
-    <script src="/static/script.js"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+
 </body>
 </html>
