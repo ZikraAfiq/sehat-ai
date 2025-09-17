@@ -125,7 +125,6 @@ async function sendMessage() {
         showTypingIndicator();
         
         // Send message to backend
-        const data = await fetchWithErrorHandling(`${API_BASE_URL}/chat`, {
         const data = await fetchWithErrorHandling(`/chat`, {
             method: 'POST',
             body: JSON.stringify({ message })
@@ -199,7 +198,6 @@ function handleKeyPress(event) {
 async function loadDoctors() {
     try {
         setLoading(true);
-        const data = await fetchWithErrorHandling(`${API_BASE_URL}/doctors`);
         const data = await fetchWithErrorHandling(`/doctors`);
         doctors = data;
         populateDoctorSelect();
@@ -289,7 +287,6 @@ async function handleAppointmentSubmit() {
             throw new Error('Please fill in all required fields');
         }
         
-        await fetchWithErrorHandling(`${API_BASE_URL}/appointments`, {
         await fetchWithErrorHandling(`/appointments`, {
             method: 'POST',
             body: JSON.stringify(appointmentData)
@@ -470,3 +467,46 @@ function setupEventListeners() {
 
 // Initialize the app when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', init);
+
+// ---------------- Appointment Modal ----------------
+function openModal() {
+  document.getElementById("appointment-modal").classList.remove("hidden");
+}
+
+function closeModal() {
+  document.getElementById("appointment-modal").classList.add("hidden");
+}
+
+const appointmentForm = document.getElementById("appointment-popup-form");
+if (appointmentForm) {
+  appointmentForm.addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const date = document.getElementById("appointment-date").value;
+    const time = document.getElementById("appointment-time").value;
+    const reason = document.getElementById("reason").value;
+
+    if (!date || !time) {
+      showAppointmentNotification("⚠️ Please select both date and time");
+      return;
+    }
+
+    // Simulated confirmation response
+    showAppointmentNotification(`✅ Appointment set for ${date} at ${time}`);
+
+    // Reset form and close modal
+    this.reset();
+    closeModal();
+  });
+}
+
+function showAppointmentNotification(message) {
+  const notif = document.getElementById("appointment-notification");
+  const notifText = document.getElementById("appointment-notification-text");
+  notifText.textContent = message;
+
+  notif.classList.add("show");
+  setTimeout(() => {
+    notif.classList.remove("show");
+  }, 3000); // disappears after 3s
+}
