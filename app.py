@@ -40,6 +40,48 @@ def get_db_connection():
     except psycopg2.OperationalError as e:
         print(f"❌ Could not connect to the database: {e}")
         return None
+    
+## Fetching all Data
+def fetch_appointments():
+    with get_db_connection as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM appointments")
+            return cur.fetchall()
+
+def fetch_doctors():
+    with get_db_connection as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM doctors")
+            return cur.fetchall()
+
+## Also Known As - User Login ID
+def fetch_patients():
+    with get_db_connection as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM patients")
+            return cur.fetchall()
+
+def fetch_prescriptions():
+    with get_db_connection as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM prescriptions")
+            return cur.fetchall()
+
+def fetch_reminders():
+    with get_db_connection as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM reminders")
+            return cur.fetchall()
+
+## Adding Schedules | Appointments
+
+
+
+
+
+
+
+
 
 # ---------- Routes ----------
 
