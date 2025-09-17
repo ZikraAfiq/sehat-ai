@@ -13,7 +13,7 @@ load_dotenv()
 
 app = Flask(__name__)
 # Enable CORS for requests from the frontend which runs on a different origin
-CORS(app, supports_credentials=True, origins=["http://127.0.0.1:5500", "http://localhost:5000"]) 
+CORS(app, supports_credentials=True, origins=["http://127.0.0.1:5500", "http://localhost:5000", "http://127.0.0.1:5001", "http://localhost:5001"]) 
 
 # ---------- Gemini AI Configuration ----------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -88,7 +88,7 @@ def chat():
         return jsonify({"error": "No message provided"}), 400
 
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         # A simple prompt to guide the model's behavior
         prompt = f"""You are a friendly and helpful healthcare AI assistant. 
         Your goal is to assist users with their health-related questions.

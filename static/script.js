@@ -126,6 +126,7 @@ async function sendMessage() {
         
         // Send message to backend
         const data = await fetchWithErrorHandling(`${API_BASE_URL}/chat`, {
+        const data = await fetchWithErrorHandling(`/chat`, {
             method: 'POST',
             body: JSON.stringify({ message })
         });
@@ -199,6 +200,7 @@ async function loadDoctors() {
     try {
         setLoading(true);
         const data = await fetchWithErrorHandling(`${API_BASE_URL}/doctors`);
+        const data = await fetchWithErrorHandling(`/doctors`);
         doctors = data;
         populateDoctorSelect();
         displayDoctors();
@@ -288,6 +290,7 @@ async function handleAppointmentSubmit() {
         }
         
         await fetchWithErrorHandling(`${API_BASE_URL}/appointments`, {
+        await fetchWithErrorHandling(`/appointments`, {
             method: 'POST',
             body: JSON.stringify(appointmentData)
         });
@@ -310,7 +313,7 @@ async function handleAppointmentSubmit() {
 async function loadMedications() {
     try {
         setLoading(true);
-        const data = await fetchWithErrorHandling(`${API_BASE_URL}/medications`);
+        const data = await fetchWithErrorHandling(`/medications`);
         medications = data || [];
         displayMedications();
     } catch (error) {
