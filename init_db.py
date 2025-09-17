@@ -96,6 +96,33 @@ INSERT INTO patients (first_name, last_name, email, password_hash, phone, dob) V
 ('John', 'Doe', 'john.doe@email.com', 'hashed_password_placeholder', '+673 888 1234', '1990-01-15');
 '''
 
+# -- Seed a Appointments for Testing
+SEED_APPOINTMENTS = '''
+INSERT INTO appointments (patient_id, doctor_id, appointment_date, reason, status) VALUES
+(1, 1, '2025-09-20 10:00:00', 'Routine heart checkup', 'scheduled'),
+(1, 2, '2025-09-21 14:00:00', 'Skin rash consultation', 'scheduled'),
+(1, 3, '2025-09-22 09:30:00', 'Pediatric checkup (family member)', 'completed');
+'''
+
+# ---------- Seed Prescriptions ----------
+SEED_PRESCRIPTIONS = '''
+INSERT INTO prescriptions (patient_id, appointment_id, medication_name, dosage, frequency, reminder_times) VALUES
+(1, 1, 'Atenolol', '50mg', 'Once daily', '["08:00"]'),
+(1, 2, 'Hydrocortisone Cream', 'Apply thin layer', 'Twice daily', '["09:00", "21:00"]'),
+(1, 3, 'Paracetamol', '500mg', 'Every 6 hours', '["08:00", "14:00", "20:00"]');
+'''
+
+# ---------- Seed Reminders ----------
+SEED_REMINDERS = '''
+INSERT INTO reminders (prescription_id, reminder_time, status) VALUES
+(1, '2025-09-20 08:00:00', 'pending'),
+(2, '2025-09-21 09:00:00', 'pending'),
+(2, '2025-09-21 21:00:00', 'pending'),
+(3, '2025-09-22 08:00:00', 'pending'),
+(3, '2025-09-22 14:00:00', 'pending'),
+(3, '2025-09-22 20:00:00', 'pending');
+'''
+
 
 # ---------- Main Function ----------
 
@@ -117,6 +144,9 @@ def init_db():
                 print("Seeding data...")
                 cur.execute(SEED_DOCTORS)
                 cur.execute(SEED_PATIENTS)
+                cur.execute(SEED_APPOINTMENTS)
+                cur.execute(SEED_PRESCRIPTIONS)
+                cur.execute(SEED_REMINDERS)
 
                 conn.commit()
         print("✅ Database initialized successfully!")

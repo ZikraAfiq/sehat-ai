@@ -47,6 +47,62 @@ def fetch_appointments():
         with conn.cursor() as cur:
             cur.execute("SELECT * FROM appointments")
             return cur.fetchall()
+        
+
+# 
+## Appointments Endpoint
+@app.route('/api/appointments', methods=['GET', 'POST'])
+def handle_appointments():
+    # For demo, assume patient_id = 1
+    patient_id = 1
+
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        if request.method == 'GET':
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT appointment_id, appointment_date, reason, status "
+                    "FROM appointments WHERE patient_id = %s ORDER BY appointment_date ASC;",
+                    (patient_id,)
+                )
+                appointments = cur.fetchall()
+            return jsonify(appointments)
+
+        elif request.method == 'POST':
+            data = request.get_json()
+            doctor_id = data.get('doctor_id')
+            date = data.get('date')
+            time = data.get('time')
+            reason = data.get('reason')
+
+            if not all([doctor_id, date, time]):
+                return jsonify({"error": "Doctor, date, and time are required"}), 400
+
+            appointment_datetime = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
+
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO appointments (patient_id, doctor_id, appointment_date, reason) "
+                    "VALUES (%s, %s, %s, %s) RETURNING appointment_id;",
+                    (patient_id, doctor_id, appointment_datetime, reason)
+                )
+                appointment_id = cur.fetchone()['appointment_id']
+                conn.commit()
+            return jsonify({"message": "Appointment booked successfully!", "appointment_id": appointment_id}), 201
+
+    except Exception as e:
+        conn.rollback()
+        print(f"Database Error: {e}")
+        return jsonify({"error": "Failed to handle appointments"}), 500
+    finally:
+        conn.close()
+
+# 
+
+
 
 def fetch_doctors():
     with get_db_connection as conn:
@@ -92,6 +148,10 @@ def login():
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
+
+@app.route("/appointments")
+def appointments():
+    return render_template("appointments.html")
 
 # ---------- API Routes ----------
 

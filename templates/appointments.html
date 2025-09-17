@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appointments</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f6f9;
+    }
+    h1 {
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <h1>My Appointments</h1>
+  <table id="appointmentsTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Date & Time</th>
+        <th>Reason</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Data will be inserted here by JS -->
+    </tbody>
+  </table>
+
+  <script>
+    async function loadAppointments() {
+      try {
+        const response = await fetch("http://127.0.0.1:5001/api/appointments"); // use your Flask API
+        const data = await response.json();
+
+        const tableBody = document.querySelector("#appointmentsTable tbody");
+        tableBody.innerHTML = ""; // clear before inserting
+
+        data.forEach(appt => {
+          const row = `
+            <tr>
+              <td>${appt.appointment_id}</td>
+              <td>${new Date(appt.appointment_date).toLocaleString()}</td>
+              <td>${appt.reason || '-'}</td>
+              <td>${appt.status}</td>
+            </tr>
+          `;
+          tableBody.innerHTML += row;
+        });
+      } catch (error) {
+        console.error("Error loading appointments:", error);
+      }
+    }
+
+    // Load appointments on page load
+    window.onload = loadAppointments;
+  </script>
+</body>
+</html>
