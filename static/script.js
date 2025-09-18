@@ -62,6 +62,8 @@ function setLoading(loading) {
 function init() {
     loadDoctors();
     loadMedications();
+    loadPatients();
+    loadPrescriptions();
     loadReminders();
     setupEventListeners();
     showSection('chat');
@@ -263,6 +265,130 @@ function selectDoctor(doctorId) {
     document.getElementById('appointment-form').scrollIntoView({ behavior: 'smooth' });
 }
 
+// ---------------- Patients ----------------
+let patients = [];
+
+async function loadPatients() {
+    try {
+        setLoading(true);
+        const data = await fetchWithErrorHandling('/patients');
+        patients = data || [];
+        populatePatientSelect();
+    } catch (error) {
+        console.error('Error loading patients:', error);
+        showNotification('Failed to load patients. Please try again.', false);
+        // Fallback dummy patient
+        patients = [{ patient_id: 1, first_name: 'John', last_name: 'Doe' }];
+        populatePatientSelect();
+    } finally {
+        setLoading(false);
+    }
+}
+
+function populatePatientSelect() {
+    const select = document.getElementById('patient-select');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Select a patient</option>';
+    patients.forEach(patient => {
+        const option = document.createElement('option');
+        option.value = patient.patient_id;
+        option.textContent = `${patient.first_name} ${patient.last_name}`;
+        select.appendChild(option);
+    });
+}
+
+// ---------------- Prescriptions ----------------
+let prescriptions = [];
+
+async function loadPrescriptions() {
+    try {
+        setLoading(true);
+        const data = await fetchWithErrorHandling('/prescriptions');
+        prescriptions = data || [];
+        displayPrescriptions();
+    } catch (error) {
+        console.error('Error loading prescriptions:', error);
+        showNotification('Failed to load prescriptions. Please try again.', false);
+    } finally {
+        setLoading(false);
+    }
+}
+
+function displayPrescriptions() {
+    const container = document.getElementById('prescriptions-container');
+    if (!container) return;
+
+    if (prescriptions.length === 0) {
+        container.innerHTML = '<p class="text-center">No prescriptions found.</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+    prescriptions.forEach(prescription => {
+        const reminderTimes = Array.isArray(prescription.reminder_times)
+            ? prescription.reminder_times.join(', ')
+            : 'Not set';
+        const prescEl = document.createElement('div');
+        prescEl.className = 'card mb-4';
+        prescEl.innerHTML = `
+            <div class="card-content">
+                <h4 class="font-semibold">${prescription.medication_name}</h4>
+                <p><strong>Dosage:</strong> ${prescription.dosage}</p>
+                <p><strong>Frequency:</strong> ${prescription.frequency}</p>
+                <p><strong>Reminders:</strong> ${reminderTimes}</p>
+            </div>
+        `;
+        container.appendChild(prescEl);
+    });
+}
+
+// ---------------- Reminders ----------------
+
+async function loadReminders() {
+    try {
+        setLoading(true);
+        const data = await fetchWithErrorHandling('/reminders');
+        reminders = data || [];
+        displayReminders();
+    } catch (error) {
+        console.error('Error loading reminders:', error);
+        showNotification('Failed to load reminders. Please try again.', false);
+    } finally {
+        setLoading(false);
+    }
+}
+
+function displayReminders() {
+    const container = document.getElementById('reminder-history');
+    if (!container) return;
+
+    if (reminders.length === 0) {
+        container.innerHTML = '<p class="text-center">No reminders set yet.</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+    reminders.forEach(reminder => {
+        const remEl = document.createElement('div');
+        remEl.className = 'card mb-2';
+        remEl.innerHTML = `
+            <div class="card-content flex justify-between items-center">
+                <p>Prescription ID: ${reminder.prescription_id} — Reminder at ${new Date(reminder.reminder_time).toLocaleString()}</p>
+                <span class="status ${reminder.status}">${reminder.status}</span>
+            </div>
+        `;
+        container.appendChild(remEl);
+    });
+}
+
+
+
+
+
+
+
+
 // Appointment form handling
 async function handleAppointmentSubmit() {
     const form = document.getElementById('appointment-form');
@@ -376,7 +502,7 @@ async function handleMedicationSubmit() {
     
     // API call to add medication
     try {
-        const response = await fetch(`${API_BASE_URL}/api/medications`, {
+        const response = await fetch(`${API_BASE_URL}/medications`, {
             mode: 'cors',
             credentials: 'include',
             method: 'POST',

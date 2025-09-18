@@ -230,7 +230,7 @@ def handle_medications():
 # ---------- CLINIC API ROUTES ----------
 
 ## Get all patients for clinic dashboard
-@app.route('/api/clinic/patients', methods=['GET'])
+@app.route('/api/patients', methods=['GET'])
 def get_all_patients():
     conn = get_db_connection()
     if conn is None:
@@ -354,6 +354,57 @@ def update_appointment_status(appointment_id):
         conn.rollback()
         print(f"Database Error: {e}")
         return jsonify({"error": "Failed to update appointment status"}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/prescriptions', methods=['GET'])
+def get_all_prescriptions():
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute('''
+                SELECT 
+                    prescription_id,
+                    patient_id,
+                    appointment_id,
+                    medication_name,
+                    dosage,
+                    frequency,
+                    reminder_times,
+                    created_at
+                FROM prescriptions
+                ORDER BY created_at DESC;
+            ''')
+            rows = cur.fetchall()
+
+        prescriptions = []
+        for row in rows:
+            reminder_times = row['reminder_times']
+            if isinstance(reminder_times, str):
+                try:
+                    reminder_times = json.loads(reminder_times)
+                except Exception as e:
+                    print(f"Error parsing reminder_times for prescription {row['prescription_id']}: {e}")
+                    reminder_times = []
+
+            prescriptions.append({
+                "prescription_id": row['prescription_id'],
+                "patient_id": row['patient_id'],
+                "appointment_id": row['appointment_id'],
+                "medication_name": row['medication_name'],
+                "dosage": row['dosage'],
+                "frequency": row['frequency'],
+                "reminder_times": reminder_times,
+                "created_at": row['created_at'].isoformat() if row['created_at'] else None
+            })
+
+        return jsonify(prescriptions)
+    except Exception as e:
+        print(f"Error fetching prescriptions: {e}")
+        return jsonify({"error": "Failed to fetch prescriptions"}), 500
     finally:
         conn.close()
 
