@@ -16,7 +16,7 @@ body {
 /* Design system colors */
 :root {
   --primary: #08997B; /* teal green */
-  --primary-light: #4FC3F7; /* secondary sky blue */
+  --primary-light: #E6F7F3; /* secondary sky blue */
   --primary-dark: #046d56; /* darker teal */
   --primary-foreground: #ffffff;
 
@@ -91,11 +91,38 @@ body {
     justify-content: center;
 }
 
-/* Navigation */
-/* ========================================= */
-/* Enhanced Navigation Button Design         */
-/* Replace existing .nav-button styles with this */
-/* ========================================= */
+/* ==========================================================================
+   3. Navigation
+   ========================================================================== */
+
+.nav-links {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    color: var(--muted-foreground);
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.nav-link:hover {
+    background-color: var(--primary-light);
+    color: var(--primary);
+}
+
+.nav-link.active {
+    background: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: var(--shadow-sm);
+}
 
 .nav-buttons {
     display: flex;
@@ -108,105 +135,35 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem 1.5rem; /* Slightly larger padding for a better feel */
+    padding: 0.75rem 1.5rem;
     border-radius: var(--radius);
     border: 1px solid var(--border);
-    background: var(--background);
-    color: var(--secondary-foreground);
+    background: var(--card);
+    color: var(--card-foreground);
     cursor: pointer;
-    font-weight: 600; /* Bolder font for better readability */
+    font-weight: 600;
     font-size: 0.95rem;
-    box-shadow: var(--shadow);
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
-
-/* --- Interactive States --- */
 
 .nav-button:hover {
-    transform: translateY(-3px); /* Lifts the button on hover */
-    box-shadow: var(--shadow-lg); /* Adds more prominent shadow */
-    background: var(--secondary);
-    color: var(--foreground);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary);
+    color: var(--primary);
 }
-
-.nav-button:active {
-    transform: translateY(-1px); /* Simulates a button press */
-    box-shadow: var(--shadow);
-}
-
-/* --- Accessibility --- */
-
-.nav-button:focus-visible {
-    outline: 2px solid transparent;
-    outline-offset: 2px;
-    box-shadow: 0 0 0 4px var(--ring); /* Clear focus ring for keyboard navigation */
-}
-
-/* --- Active Section Button --- */
 
 .nav-button.active {
     background: var(--primary);
     color: var(--primary-foreground);
     border-color: var(--primary);
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); /* Subtle shadow using the primary color */
-    transform: translateY(0); /* Resets any hover transform */
+    box-shadow: var(--shadow);
+    transform: translateY(0);
 }
 
 .nav-button.active:hover {
-    background: var(--primary-dark); /* Darkens slightly on hover but doesn't lift */
-    transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
-}
-
-.nav-button.active i {
-    color: var(--primary-foreground);
-}
-
-/* Enhanced Navigation Link Design */
-.nav-links {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-.nav-link {
-    display: inline-flex;
-    align-items: center;
-    text-decoration: none;
-    gap: 0.5rem;
-    padding: 0.6rem 1.25rem;
-    border-radius: var(--radius);
-    background: transparent;
-    color: var(--secondary-foreground);
-    font-weight: 500;
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-    border: 1px solid transparent;
-}
-
-.nav-link::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.5s ease;
-}
-
-.nav-link:hover::before {
-    left: 100%;
-}
-
-.nav-link:hover {
-    background: var(--primary-light);
-    color: var(--primary-foreground);
-    border-color: var(--primary-light);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.15);
+    background: var(--primary-dark);
 }
 
 .nav-link:active {

@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
 from flask_cors import CORS
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import os
 from dotenv import load_dotenv
 import psycopg2
@@ -7,13 +8,21 @@ from psycopg2.extras import RealDictCursor
 import google.generativeai as genai
 import re, json, random
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Load environment variables from a .env file
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
 # Enable CORS for requests from the frontend which runs on a different origin
-CORS(app, supports_credentials=True, origins=["http://127.0.0.1:5500", "http://localhost:5000", "http://127.0.0.1:5001", "http://localhost:5001"]) 
+CORS(app, supports_credentials=True, origins=["http://127.0.0.1:5500", "http://localhost:5000", "http://127.0.0.1:5001", "http://localhost:5001"])
 
 # ---------- Gemini AI Configuration ----------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -41,19 +50,106 @@ def get_db_connection():
         print(f"❌ Could not connect to the database: {e}")
         return None
 
+# ---------- User Class for Flask-Login ----------
+class User(UserMixin):
+    def __init__(self, id, email):
+        self.id = id
+        self.email = email
+
+@login_manager.user_loader
+def load_user(user_id):
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, email FROM users WHERE id = %s", (user_id,))
+            user_data = cur.fetchone()
+            if user_data:
+                return User(id=user_data['id'], email=user_data['email'])
+    except Exception as e:
+        print(f"Error loading user: {e}")
+    finally:
+        conn.close()
+    return None
+
 # ---------- Routes ----------
 
 @app.route('/')
 def home():
     return render_template('index.html', title='HealthCare Assistant')
 
-@app.route("/signup")
+@app.route("/signup", methods=['GET', 'POST'])
 def signup():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                # Check if user already exists
+                cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+                if cur.fetchone() is not None:
+                    flash('Email already registered. Please use a different email.', 'error')
+                    return redirect(url_for('signup'))
+                
+                # Create new user
+                hashed_password = generate_password_hash(password)
+                cur.execute(
+                    "INSERT INTO users (email, password) VALUES (%s, %s) RETURNING id",
+                    (email, hashed_password)
+                )
+                user_id = cur.fetchone()['id']
+                conn.commit()
+                
+                # Log the user in
+                user = User(id=user_id, email=email)
+                login_user(user)
+                flash('Registration successful!', 'success')
+                return redirect(url_for('home'))
+                
+        except Exception as e:
+            conn.rollback()
+            print(f"Error during signup: {e}")
+            flash('An error occurred during registration. Please try again.', 'error')
+        finally:
+            conn.close()
+    
     return render_template("signup.html")
 
-@app.route("/login")
+@app.route("/login", methods=['GET', 'POST'])
 def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, email, password FROM users WHERE email = %s", (email,))
+                user_data = cur.fetchone()
+                
+                if user_data and check_password_hash(user_data['password'], password):
+                    user = User(id=user_data['id'], email=user_data['email'])
+                    login_user(user)
+                    next_page = request.args.get('next')
+                    flash('Login successful!', 'success')
+                    return redirect(next_page or url_for('home'))
+                else:
+                    flash('Invalid email or password. Please try again.', 'error')
+        except Exception as e:
+            print(f"Error during login: {e}")
+            flash('An error occurred during login. Please try again.', 'error')
+        finally:
+            conn.close()
+    
     return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('home'))
 
 @app.route("/contact")
 def contact():
@@ -61,19 +157,46 @@ def contact():
 
 @app.route("/appointments")
 def appointments():
-    return render_template("appointments.html")
+    # Get available appointments from the database
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            # Get all available doctors for booking
+            cur.execute("""
+                SELECT d.*, 
+                       (SELECT COUNT(*) FROM appointments a 
+                        WHERE a.doctor_id = d.id 
+                        AND a.status = 'available') as available_slots
+                FROM doctors d
+                ORDER BY d.specialization, d.last_name
+            """)
+            doctors = cur.fetchall()
+            
+            # Get upcoming appointments if user is logged in
+            user_appointments = []
+            if current_user.is_authenticated:
+                cur.execute("""
+                    SELECT a.*, d.first_name as doctor_first_name, d.last_name as doctor_last_name, d.specialization
+                    FROM appointments a
+                    JOIN doctors d ON a.doctor_id = d.id
+                    WHERE a.patient_id = %s
+                    ORDER BY a.appointment_date DESC
+                """, (current_user.id,))
+                user_appointments = cur.fetchall()
+                
+        return render_template("appointments.html", 
+                             doctors=doctors, 
+                             appointments=user_appointments)
+    except Exception as e:
+        print(f"Error fetching appointments: {e}")
+        flash('Failed to load appointments. Please try again.', 'error')
+        return render_template("appointments.html", 
+                             doctors=[], 
+                             appointments=[])
+    finally:
+        conn.close()
 
-@app.route("/clinic")
-def clinic_dashboard():
-    return render_template("clinic_dashboard.html")
-
-@app.route("/clinic/patients")
-def clinic_patients():
-    return render_template("clinic_patients.html")
-
-@app.route("/clinic/appointments")
-def clinic_appointments():
-    return render_template("clinic_appointments.html")
+# Clinic-related routes have been removed as per requirements
 
 # ---------- API Routes ----------
 
