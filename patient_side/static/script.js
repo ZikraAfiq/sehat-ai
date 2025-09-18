@@ -67,7 +67,7 @@ function init() {
     loadReminders();
     setupEventListeners();
     showSection('chat');
-    
+
     // Set minimum date for appointment to today
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('appointment-date').min = today;
@@ -79,17 +79,17 @@ function showSection(section) {
     document.querySelectorAll('.section').forEach(el => {
         el.classList.add('hidden');
     });
-    
+
     // Remove active class from all buttons
     document.querySelectorAll('.nav-button').forEach(btn => {
         btn.classList.remove('active');
     });
-    
+
     // Show selected section and update active button
     document.getElementById(`${section}-section`).classList.remove('hidden');
     document.getElementById(`${section}-btn`).classList.add('active');
     currentSection = section;
-    
+
     // Scroll to top when changing sections
     window.scrollTo(0, 0);
 }
@@ -98,11 +98,11 @@ function showSection(section) {
 function showNotification(message, isSuccess = true) {
     const notification = document.getElementById('notification');
     const notificationText = document.getElementById('notification-text');
-    
+
     notificationText.textContent = message;
     notification.style.background = isSuccess ? 'var(--success)' : 'var(--destructive)';
     notification.classList.add('show');
-    
+
     setTimeout(() => {
         notification.classList.remove('show');
     }, 3000);
@@ -112,26 +112,26 @@ function showNotification(message, isSuccess = true) {
 async function sendMessage() {
     const input = document.getElementById('chat-input');
     const message = input.value.trim();
-    
+
     if (!message) return;
-    
+
     // Add user message to chat
     addMessage(message, 'user');
-    
+
     // Clear input and disable it while waiting for response
     input.value = '';
     input.disabled = true;
-    
+
     try {
         // Show typing indicator
         showTypingIndicator();
-        
+
         // Send message to backend
         const data = await fetchWithErrorHandling(`/chat`, {
             method: 'POST',
             body: JSON.stringify({ message })
         });
-        
+
         // Add bot response to chat
         if (data.text) {
             addMessage(data.text, 'bot', data.suggestions || []);
@@ -214,9 +214,9 @@ async function loadDoctors() {
 function populateDoctorSelect() {
     const select = document.getElementById('doctor-select');
     if (!select) return;
-    
+
     select.innerHTML = '<option value="">Select a doctor</option>';
-    
+
     doctors.forEach(doctor => {
         const option = document.createElement('option');
         option.value = doctor.id;
@@ -228,13 +228,13 @@ function populateDoctorSelect() {
 function displayDoctors() {
     const container = document.getElementById('doctors-container');
     if (!container) return;
-    
+
     container.innerHTML = '';
-    
+
     doctors.forEach(doctor => {
         const availableDays = JSON.parse(doctor.available_days || '[]').join(', ');
         const availableHours = JSON.parse(doctor.available_hours || '{}');
-        
+
         const doctorCard = document.createElement('div');
         doctorCard.className = 'card doctor-card';
         doctorCard.innerHTML = `
@@ -253,7 +253,7 @@ function displayDoctors() {
                 </button>
             </div>
         `;
-        
+
         container.appendChild(doctorCard);
     });
 }
@@ -381,24 +381,17 @@ function displayReminders() {
     });
 }
 
-
-
-
-
-
-
-
 // Appointment form handling
 async function handleAppointmentSubmit() {
     const form = document.getElementById('appointment-form');
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalBtnText = submitBtn.textContent;
-    
+
     try {
         // Disable form and show loading state
         submitBtn.disabled = true;
         submitBtn.textContent = 'Booking...';
-        
+
         const formData = new FormData(form);
         const appointmentData = {
             doctor_id: formData.get('doctor'),
@@ -406,17 +399,17 @@ async function handleAppointmentSubmit() {
             time: formData.get('time'),
             reason: formData.get('reason')
         };
-        
+
         // Basic validation
         if (!appointmentData.doctor_id || !appointmentData.date || !appointmentData.time) {
             throw new Error('Please fill in all required fields');
         }
-        
+
         await fetchWithErrorHandling(`/appointments`, {
             method: 'POST',
             body: JSON.stringify(appointmentData)
         });
-        
+
         showNotification('Appointment booked successfully!');
         form.reset();
     } catch (error) {
@@ -427,7 +420,7 @@ async function handleAppointmentSubmit() {
         submitBtn.disabled = false;
         submitBtn.textContent = originalBtnText;
     }
-    
+
     return false; // Prevent form submission
 }
 
@@ -453,19 +446,19 @@ async function loadMedications() {
 function displayMedications() {
     const container = document.getElementById('medications-container');
     if (!container) return;
-    
+
     if (medications.length === 0) {
         container.innerHTML = '<p class="text-center">No medications added yet. Use the form to add a new medication reminder.</p>';
         return;
     }
-    
+
     container.innerHTML = '';
-    
+
     medications.forEach(med => {
         const medElement = document.createElement('div');
         medElement.className = 'card mb-4';
         const reminderTimes = Array.isArray(med.reminder_times) ? med.reminder_times.filter(t => t !== null).join(', ') : 'Not set';
-        
+
         medElement.innerHTML = `
             <div class="card-content">
                 <div class="flex justify-between items-center">
@@ -475,7 +468,7 @@ function displayMedications() {
                         <p><strong>Frequency:</strong> ${med.frequency}</p>
                         <p><strong>Reminders:</strong> ${reminderTimes}</p>
                     </div>
-                    <button class="btn btn-destructive" onclick="removeMedication(${med.id})">
+                    <button class="btn btn-destructive" onclick="deleteMedication(${med.id})">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -485,20 +478,48 @@ function displayMedications() {
     });
 }
 
+// Delete Button for Medications
+async function deleteMedication(medicationId) {
+    if (!confirm("Are you sure you want to delete this medication?")) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/medications/${medicationId}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.message || 'Failed to delete medication');
+        }
+
+        // Update frontend state
+        medications = medications.filter(med => med.id !== medicationId);
+        displayMedications();
+
+        showNotification("✅ Medication deleted successfully!");
+    } catch (error) {
+        console.error("Error deleting medication:", error);
+        showNotification(`❌ ${error.message}`, false);
+    }
+}
+
 async function handleMedicationSubmit() {
     const name = document.getElementById('medication-name').value;
     const dosage = document.getElementById('medication-dosage').value;
     const time = document.getElementById('medication-time').value;
     const daily = document.getElementById('medication-daily').checked;
-    
+
     if (!name || !dosage || !time) {
         showNotification('Please fill all required fields', false);
         return;
     }
-    
+
     const frequency = daily ? 'Once daily' : 'As needed';
     const reminderTimes = daily ? [time] : [];
-    
+
     // API call to add medication
     try {
         const response = await fetch(`${API_BASE_URL}/medications`, {
@@ -516,13 +537,13 @@ async function handleMedicationSubmit() {
                 reminder_times: reminderTimes
             })
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
         if (data.error) {
             showNotification(data.error, false);
         } else {
@@ -553,17 +574,6 @@ function removeMedication(medicationId) {
     showNotification('Medication removed.');
 }
 
-// Placeholder for reminder history functionality
-// function loadReminders() {
-//     console.log("ji")
-//     // In a real app, this would fetch reminder history from an API.
-//     const container = document.getElementById('reminder-history');
-//     if (container) {
-//         // Initially, the HTML content serves as the default state.
-//         // container.innerHTML = '<p class="text-center">No reminders set yet</p>';
-//     }
-// }
-
 // Setup event listeners
 function setupEventListeners() {
     // Chat input
@@ -589,23 +599,79 @@ function setupEventListeners() {
             handleMedicationSubmit();
         });
     }
+
 }
+
+// Medication form submit handler
+async function handleMedicationSubmit() {
+    const name = document.getElementById('medication-name').value.trim();
+    const dosage = document.getElementById('medication-dosage').value.trim();
+    const time = document.getElementById('medication-time').value;
+
+    if (!name || !dosage || !time) {
+        showNotification('⚠️ Please fill all required fields', false);
+        return;
+    }
+
+    const newMedication = {
+        patient_id: 1,  // For now hardcoded, later you can set the logged-in patient
+        medication_name: name,
+        dosage: dosage,
+        frequency: 'Once daily',
+        reminder_times: [time]
+    };
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/medications`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(newMedication)
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.message || 'Failed to add medication');
+        }
+
+        const data = await response.json();
+
+        // Update UI with the new row
+        medications.push({
+            id: data.medication_id || data.id,
+            ...newMedication
+        });
+        displayMedications();
+
+        showNotification('✅ Medication added successfully!');
+        document.getElementById('medication-form').reset();
+    } catch (error) {
+        console.error('Error adding medication:', error);
+        showNotification(`❌ ${error.message}`, false);
+    }
+}
+
+
+
+
 
 // Initialize the app when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', init);
 
 // ---------------- Appointment Modal ----------------
 function openModal() {
-  document.getElementById("appointment-modal").classList.remove("hidden");
+    document.getElementById("appointment-modal").classList.remove("hidden");
 }
 
 function closeModal() {
-  document.getElementById("appointment-modal").classList.add("hidden");
+    document.getElementById("appointment-modal").classList.add("hidden");
 }
 
 const appointmentForm = document.getElementById("appointment-popup-form");
 if (appointmentForm) {
-  appointmentForm.addEventListener("submit", function(e) {
+  appointmentForm.addEventListener("submit", async function(e) {
     e.preventDefault();
 
     const date = document.getElementById("appointment-date").value;
@@ -617,22 +683,37 @@ if (appointmentForm) {
       return;
     }
 
-    // Simulated confirmation response
-    showAppointmentNotification(`✅ Appointment set for ${date} at ${time}`);
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/popup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date, time, reason })
+      });
 
-    // Reset form and close modal
-    this.reset();
-    closeModal();
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to add appointment");
+      }
+
+      showAppointmentNotification(`✅ Appointment set for ${date} at ${time}`);
+      this.reset();
+      closeModal();
+
+    } catch (error) {
+      console.error("Appointment Error:", error);
+      showAppointmentNotification(`⚠️ ${error.message}`);
+    }
   });
 }
 
 function showAppointmentNotification(message) {
-  const notif = document.getElementById("appointment-notification");
-  const notifText = document.getElementById("appointment-notification-text");
-  notifText.textContent = message;
+    const notif = document.getElementById("appointment-notification");
+    const notifText = document.getElementById("appointment-notification-text");
+    notifText.textContent = message;
 
-  notif.classList.add("show");
-  setTimeout(() => {
-    notif.classList.remove("show");
-  }, 3000); // disappears after 3s
+    notif.classList.add("show");
+    setTimeout(() => {
+        notif.classList.remove("show");
+    }, 3000); // disappears after 3s
 }

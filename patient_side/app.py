@@ -72,7 +72,6 @@ def load_user(user_id):
     return None
 
 # ---------- Routes ----------
-
 @app.route('/')
 def home():
     return render_template('index.html', title='HealthCare Assistant')
@@ -457,6 +456,49 @@ def get_patient_details(patient_id):
     finally:
         conn.close()
 
+# ---------- Add Appointment from Popup Form ----------
+@app.route('/api/appointments/popup', methods=['POST'])
+def add_appointment_popup():
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Database connection failed"}), 500
+
+    try:
+        data = request.get_json()
+        date = data.get('date')
+        time = data.get('time')
+        reason = data.get('reason', '')
+
+        if not date or not time:
+            return jsonify({"error": "Date and time are required"}), 400
+
+        # Combine date and time
+        try:
+            appointment_datetime = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            return jsonify({"error": "Invalid date or time format"}), 400
+
+        patient_id = 1  # Default
+        doctor_id = 1   # Default
+
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO appointments (patient_id, doctor_id, appointment_date, reason) "
+                "VALUES (%s, %s, %s, %s) RETURNING appointment_id;",
+                (patient_id, doctor_id, appointment_datetime, reason)
+            )
+            new_id = cur.fetchone()['appointment_id']
+            conn.commit()
+
+        return jsonify({"message": "Appointment added successfully!", "appointment_id": new_id}), 201
+
+    except Exception as e:
+        conn.rollback()
+        print(f"Database Error: {e}")
+        return jsonify({"error": "Failed to add appointment"}), 500
+    finally:
+        conn.close()
+
 ## Update appointment status
 @app.route('/api/clinic/appointments/<int:appointment_id>', methods=['PATCH'])
 def update_appointment_status(appointment_id):
@@ -514,11 +556,35 @@ def get_all_reminders():
     except Exception as e:
         print("Error fetching reminders:", e)
         return jsonify({"error": "Failed to fetch reminders"}), 500
+    
 
-
-
-
-
+# ---------- Delete Medication ----------
+@app.route('/api/medications/<int:medication_id>', methods=['DELETE'])
+def delete_medication(medication_id):
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        with conn.cursor() as cur:
+            # Check if medication exists
+            cur.execute("SELECT * FROM prescriptions WHERE prescription_id = %s", (medication_id,))
+            med = cur.fetchone()
+            if not med:
+                return jsonify({"error": "Medication not found"}), 404
+            
+            # Delete medication
+            cur.execute("DELETE FROM prescriptions WHERE prescription_id = %s", (medication_id,))
+            conn.commit()
+            
+        return jsonify({"message": "Medication deleted successfully"})
+    
+    except Exception as e:
+        conn.rollback()
+        print(f"Database Error: {e}")
+        return jsonify({"error": "Failed to delete medication"}), 500
+    finally:
+        conn.close()
 
 @app.route('/api/prescriptions', methods=['GET'])
 def get_all_prescriptions():
