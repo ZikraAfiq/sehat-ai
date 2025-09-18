@@ -4,18 +4,9 @@
 
 {% block content %}
 <div class="container">
-    <div class="flex justify-between items-center" style="margin-bottom: 2rem;">
-        <div>
-            <h1 style="font-size: 2.5rem; font-weight: 700; color: var(--foreground); margin-bottom: 0.5rem;">Patient Management</h1>
-            <p style="color: var(--muted-foreground); font-size: 1.1rem;">View, add, edit, and delete patient records</p>
-        </div>
-        <div class="flex items-center" style="gap: 1rem;">
-            <input type="text" id="search-patients" placeholder="Search patients..." class="form-control" style="width: 250px;">
-            <!-- Fixed the onclick function to call showAddPatientModal instead of testModal -->
-            <button id="add-patient-btn" class="btn btn-primary" onclick="showAddPatientModal()">
-                <i class="fas fa-plus"></i> Add Patient
-            </button>
-        </div>
+    <div style="margin-bottom: 2rem;">
+        <h1 style="font-size: 2.5rem; font-weight: 700; color: var(--foreground); margin-bottom: 0.5rem;">Patient Management</h1>
+        <p style="color: var(--muted-foreground); font-size: 1.1rem;">View, add, edit, and delete patient records</p>
     </div>
 
     <div id="patient-modal" class="modal hidden">
@@ -76,8 +67,14 @@
     </div>
 
     <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h2 class="card-title"><i class="fas fa-users"></i> All Patients</h2>
+            <div class="flex items-center" style="gap: 1rem;">
+                <input type="text" id="search-patients" placeholder="Search patients..." class="form-control" style="width: 250px;">
+                <button id="add-patient-btn" class="btn btn-primary" onclick="showAddPatientModal()">
+                    <i class="fas fa-plus"></i> Add Patient
+                </button>
+            </div>
         </div>
         <div class="card-content">
             <div style="overflow-x: auto;">
