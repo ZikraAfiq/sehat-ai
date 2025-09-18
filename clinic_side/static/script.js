@@ -1,5 +1,5 @@
 // Enhanced Global variables
-const API_BASE_URL = "http://localhost:5001/api"
+const API_BASE_URL = "/api"
 
 // Function to make API requests with proper CORS handling
 async function apiRequest(endpoint, method = "GET", data = null) {
@@ -125,10 +125,11 @@ async function sendMessage() {
     showTypingIndicator()
 
     // Send message to backend
-    const data = await fetchWithErrorHandling(`/chat`, {
-      method: "POST",
-      body: JSON.stringify({ message }),
-    })
+  const data = await fetchWithErrorHandling(`/chat`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  })
+
 
     // Add bot response to chat
     if (data.text) {
