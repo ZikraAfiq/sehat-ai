@@ -163,12 +163,10 @@ function addMessage(text, type, suggestions = []) {
     const messagesContainer = document.getElementById('chat-messages');
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
-    
-    // Sanitize text to prevent HTML injection and format newlines
-    const formattedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>');
 
-    let messageContent = `<div class="message-content">${formattedText}`;
-    
+    // Render Markdown (bold, italic, lists, etc.)
+    let messageContent = `<div class="message-content">${marked.parse(text)}`;
+
     if (suggestions && suggestions.length > 0) {
         messageContent += '<div class="suggestions">';
         suggestions.forEach(suggestion => {
@@ -176,14 +174,15 @@ function addMessage(text, type, suggestions = []) {
         });
         messageContent += '</div>';
     }
-    
+
     messageContent += '</div>';
     messageDiv.innerHTML = messageContent;
     messagesContainer.appendChild(messageDiv);
-    
+
     // Scroll to bottom
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
+
 
 function setSuggestion(suggestion) {
     document.getElementById('chat-input').value = suggestion;

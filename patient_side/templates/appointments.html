@@ -4,32 +4,52 @@
 
 {% block extra_css %}
   <style>
-    .appointments-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .appointments-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background: white;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .appointments-table th,
-    .appointments-table td {
-      padding: 12px;
-      border: 1px solid #ddd;
-      text-align: left;
-    }
-    .appointments-table th {
-      background: #007bff;
-      color: white;
-    }
-    .appointments-table tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-  </style>
+  .appointments-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background: var(--background, #F5F5F5);
+  }
+
+  .appointments-container h1 {
+    color: var(--primary, #08997B);
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .appointments-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border: 1px solid #ddd;
+  }
+
+  .appointments-table th,
+  .appointments-table td {
+    padding: 12px;
+    border: 1px solid #ddd;
+    text-align: left;
+    color: var(--text, #212121);
+  }
+
+  .appointments-table th {
+    background: var(--primary, #08997B);
+    color: white;
+    font-weight: 600;
+  }
+
+  .appointments-table tr:nth-child(even) {
+    background: var(--background, #F5F5F5);
+  }
+
+  .appointments-table tr:hover {
+    background: var(--accent, #AED581);
+    color: var(--text, #212121);
+  }
+</style>
+
 {% endblock %}
 
 {% block content %}

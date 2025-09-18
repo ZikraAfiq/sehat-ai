@@ -246,7 +246,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 70vh;
-    max-height: 700px;
+    max-height: 800px;
     border-radius: var(--radius);
 }
 
@@ -878,4 +878,20 @@ body {
 #appointment-notification.show {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* AI Disclaimer */
+.ai-disclaimer {
+    padding: 0.5rem 0.5rem;
+    padding-left: 2rem;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    text-align: left;
+    background-color: #08997B;
+
+}
+
+.disc-ai {
+    color: white;
+    font-size: 0.8rem
 }
