@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Medsync.ai{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo" style="text-decoration: none; color: inherit;">
+                <div class="logo-icon">
+                    <i class="fas fa-hospital"></i>
+                </div>
+                <span>Medsync.ai</span>
+            </a>
+            <nav class="nav-links">
+                <a href="{{ url_for('clinic_patients') }}" class="nav-link {{ 'active' if request.path == url_for('clinic_patients') or request.path == '/' }}">
+                    <i class="fas fa-users"></i> Patients
+                </a>
+                <a href="{{ url_for('clinic_appointments') }}" class="nav-link {{ 'active' if request.path == url_for('clinic_appointments') }}">
+                    <i class="fas fa-calendar-alt"></i> Appointments
+                </a>
+                <a href="{{ url_for('chatbot') }}" class="nav-link {{ 'active' if request.path == url_for('chatbot') }}">
+                    <i class="fas fa-robot"></i> AI Assistant
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="loading-indicator hidden">
+            <div class="loading-spinner"></div>
+            <span>Loading...</span>
+        </div>
+
+        <!-- Notification -->
+        <div id="notification" class="notification">
+            <i class="fas fa-check-circle"></i>
+            <span id="notification-text"></span>
+        </div>
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // Show notification function
+        function showNotification(message, isSuccess = true) {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notification-text');
+            
+            notificationText.textContent = message;
+            notification.style.background = isSuccess ? 'var(--success)' : 'var(--destructive)';
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Set loading state
+        function setLoading(loading) {
+            const loadingIndicator = document.getElementById('loading-indicator');
+            if (loadingIndicator && loading) {
+                loadingIndicator.classList.remove('hidden');
+            } else if (loadingIndicator) {
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+    </script>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

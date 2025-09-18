@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Management - Medsync.ai{% endblock %}
+
+{% block content %}
+
+    <div class="container">
+        <div class="flex justify-between items-center" style="margin-bottom: 2rem;">
+            <div>
+                <h1 style="font-size: 2.5rem; font-weight: 700; color: var(--foreground); margin-bottom: 0.5rem;">Patient Management</h1>
+                <p style="color: var(--muted-foreground); font-size: 1.1rem;">View and manage patient information, appointments, and medications</p>
+            </div>
+        </div>
+
+        <!-- Patients List -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">
+                        <i class="fas fa-users"></i>
+                        Patients List
+                    </h2>
+                    <p class="card-description">Manage your patients and their medical records</p>
+                </div>
+                <button id="add-patient-btn" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Patient
+                </button>
+            </div>
+            <div class="card-body p-0">
+                {% if patients %}
+                <div class="overflow-hidden">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="pl-6">Patient</th>
+                                <th>Date of Birth</th>
+                                <th>Gender</th>
+                                <th>Contact</th>
+                                <th>Last Visit</th>
+                                <th>Status</th>
+                                <th class="pr-6">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            {% for patient in patients %}
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="py-4 pl-6">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="avatar">
+                                            {{ patient.first_name[0] }}{{ patient.last_name[0] }}
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-gray-900">
+                                                {{ patient.first_name }} {{ patient.last_name }}
+                                            </div>
+                                            <div class="text-sm text-gray-500">ID: {{ patient.id }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-gray-600">
+                                    {{ patient.date_of_birth.strftime('%b %d, %Y') if patient.date_of_birth else 'N/A' }}
+                                </td>
+                                <td>
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                        {{ patient.gender or 'N/A' }}
+                                    </span>
+                                </td>
+                                <td class="text-gray-600">
+                                    <div class="flex flex-col">
+                                        <span>{{ patient.email or 'No email' }}</span>
+                                        <span class="text-sm text-gray-500">{{ patient.phone or 'No phone' }}</span>
+                                    </div>
+                                </td>
+                                <td class="text-gray-600">
+                                    {{ patient.last_visit.strftime('%b %d, %Y') if patient.last_visit else 'Never' }}
+                                </td>
+                                <td>
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                        Active
+                                    </span>
+                                </td>
+                                <td class="pr-6">
+                                    <div class="flex items-center justify-end space-x-2">
+                                        <button class="btn-icon" title="View Details" onclick="viewPatientDetails({{ patient.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn-icon" title="Edit" onclick="editPatient({{ patient.id }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn-icon text-red-500 hover:bg-red-50" title="Delete">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-users-slash"></i>
+                    <h3>No patients found</h3>
+                    <p>Add your first patient to get started</p>
+                </div>
+                {% endif %}
+            </div>
+            {% if patients %}
+            <div class="card-footer">
+                <div class="text-sm text-gray-500">
+                    Showing <span class="font-medium">{{ patients|length }}</span> of <span class="font-medium">{{ patients|length }}</span> patients
+                </div>
+                <div class="pagination">
+                    <button class="btn-icon" disabled>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span class="pagination-info">Page 1 of 1</span>
+                    <button class="btn-icon" disabled>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Patient Details Modal -->
+        <div id="patient-modal" class="modal hidden">
+            <div class="modal-content" style="max-width: 800px; width: 90%;">
+                <span class="modal-close" onclick="closePatientModal()">&times;</span>
+                <div id="patient-details-content">
+                    <div style="text-align: center; padding: 2rem; color: var(--muted-foreground);">Loading patient details...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-users"></i>
+                    All Patients
+                </div>
+                <div class="card-description">Complete list of registered patients with their information</div>
+            </div>
+            <div class="card-content">
+                <div style="overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Patient ID</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Name</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Email</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Phone</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Date of Birth</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Appointments</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Medications</th>
+                                <th style="background: var(--muted); padding: 1rem; text-align: left; font-weight: 600; color: var(--foreground); border-bottom: 1px solid var(--border);">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patients-table">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 2rem; color: var(--muted-foreground); font-style: italic;">Loading patients...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="loading-indicator hidden">
+        <div class="loading-spinner"></div>
+        <span>Loading...</span>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+        <i class="fas fa-check-circle"></i>
+        <span id="notification-text"></span>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        const API_BASE_URL = 'http://localhost:5001/api';
+        let allPatients = [];
+
+        // Fetch data from API
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'include',
+                    mode: 'cors'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Fetch error:', error);
+                return null;
+            }
+        }
+
+        // Load all patients
+        async function loadPatients() {
+            setLoading(true);
+            const patients = await fetchData('/clinic/patients');
+            const tbody = document.getElementById('patients-table');
+            
+            if (!patients) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--destructive);">Failed to load patients</td></tr>';
+                setLoading(false);
+                return;
+            }
+
+            if (patients.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--muted-foreground); font-style: italic;">No patients found</td></tr>';
+                setLoading(false);
+                return;
+            }
+
+            allPatients = patients;
+            displayPatients(patients);
+            setLoading(false);
+        }
+
+        // Display patients in table
+        function displayPatients(patients) {
+            const tbody = document.getElementById('patients-table');
+            
+            tbody.innerHTML = patients.map(patient => `
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 1rem; vertical-align: top; font-weight: 600;">#${patient.patient_id}</td>
+                    <td style="padding: 1rem; vertical-align: top;">
+                        <strong>${patient.first_name} ${patient.last_name}</strong>
+                    </td>
+                    <td style="padding: 1rem; vertical-align: top;">${patient.email}</td>
+                    <td style="padding: 1rem; vertical-align: top;">${patient.phone || 'N/A'}</td>
+                    <td style="padding: 1rem; vertical-align: top;">${patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A'}</td>
+                    <td style="padding: 1rem; vertical-align: top; text-align: center;">
+                        <span style="background: var(--primary-light); color: var(--primary-foreground); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">${patient.total_appointments || 0}</span>
+                    </td>
+                    <td style="padding: 1rem; vertical-align: top; text-align: center;">
+                        <span style="background: var(--accent); color: var(--accent-foreground); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">${patient.total_medications || 0}</span>
+                    </td>
+                    <td style="padding: 1rem; vertical-align: top;">
+                        <button class="btn btn-primary" onclick="viewPatientDetails(${patient.patient_id})" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
+                            <i class="fas fa-eye"></i> View Details
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Search patients
+        function searchPatients() {
+            const searchTerm = document.getElementById('search-patients').value.toLowerCase();
+            const filteredPatients = allPatients.filter(patient => 
+                patient.first_name.toLowerCase().includes(searchTerm) ||
+                patient.last_name.toLowerCase().includes(searchTerm) ||
+                patient.email.toLowerCase().includes(searchTerm) ||
+                (patient.phone && patient.phone.includes(searchTerm))
+            );
+            displayPatients(filteredPatients);
+        }
+
+        // View patient details
+        async function viewPatientDetails(patientId) {
+            const modal = document.getElementById('patient-modal');
+            const content = document.getElementById('patient-details-content');
+            
+            modal.classList.remove('hidden');
+            content.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--muted-foreground);">Loading patient details...</div>';
+            
+            try {
+                const patientData = await fetchData(`/clinic/patients/${patientId}`);
+                
+                if (!patientData) {
+                    content.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--destructive);">Failed to load patient details</div>';
+                    return;
+                }
+
+                const { patient, appointments, medications } = patientData;
+                
+                content.innerHTML = `
+                    <div style="margin-bottom: 2rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: 600; color: var(--foreground); margin-bottom: 1rem;">
+                            <i class="fas fa-user"></i> ${patient.first_name} ${patient.last_name}
+                        </h2>
+                        <div class="grid grid-2" style="gap: 1rem; margin-bottom: 2rem;">
+                            <div>
+                                <p><strong>Email:</strong> ${patient.email}</p>
+                                <p><strong>Phone:</strong> ${patient.phone || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p><strong>Date of Birth:</strong> ${patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A'}</p>
+                                <p><strong>Patient ID:</strong> #${patient.patient_id}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-2" style="gap: 2rem;">
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--foreground); margin-bottom: 1rem;">
+                                <i class="fas fa-calendar-alt"></i> Appointments (${appointments.length})
+                            </h3>
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                ${appointments.length > 0 ? appointments.map(apt => `
+                                    <div style="border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                            <strong>Dr. ${apt.doctor_first_name} ${apt.doctor_last_name}</strong>
+                                            <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; ${getStatusStyle(apt.status)}">${apt.status}</span>
+                                        </div>
+                                        <p style="color: var(--muted-foreground); font-size: 0.875rem; margin-bottom: 0.25rem;">${apt.specialization}</p>
+                                        <p style="color: var(--muted-foreground); font-size: 0.875rem; margin-bottom: 0.25rem;">${new Date(apt.appointment_date).toLocaleString()}</p>
+                                        ${apt.reason ? `<p style="color: var(--muted-foreground); font-size: 0.875rem;"><strong>Reason:</strong> ${apt.reason}</p>` : ''}
+                                    </div>
+                                `).join('') : '<p style="color: var(--muted-foreground); font-style: italic;">No appointments found</p>'}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style="font-size: 1.25rem; font-weight: 600; color: var(--foreground); margin-bottom: 1rem;">
+                                <i class="fas fa-pills"></i> Medications (${medications.length})
+                            </h3>
+                            <div style="max-height: 300px; overflow-y: auto;">
+                                ${medications.length > 0 ? medications.map(med => `
+                                    <div style="border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem;">
+                                        <strong>${med.medication_name}</strong>
+                                        <p style="color: var(--muted-foreground); font-size: 0.875rem; margin-bottom: 0.25rem;"><strong>Dosage:</strong> ${med.dosage}</p>
+                                        <p style="color: var(--muted-foreground); font-size: 0.875rem; margin-bottom: 0.25rem;"><strong>Frequency:</strong> ${med.frequency}</p>
+                                        ${med.reminder_times ? `<p style="color: var(--muted-foreground); font-size: 0.875rem;"><strong>Reminders:</strong> ${JSON.parse(med.reminder_times).join(', ')}</p>` : ''}
+                                    </div>
+                                `).join('') : '<p style="color: var(--muted-foreground); font-style: italic;">No medications found</p>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading patient details:', error);
+                content.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--destructive);">Failed to load patient details</div>';
+            }
+        }
+
+        // Close patient modal
+        function closePatientModal() {
+            document.getElementById('patient-modal').classList.add('hidden');
+        }
+
+        // Get status badge styling
+        function getStatusStyle(status) {
+            switch(status) {
+                case 'scheduled':
+                    return 'background: #dbeafe; color: #1e40af;';
+                case 'completed':
+                    return 'background: #dcfce7; color: #166534;';
+                case 'cancelled':
+                    return 'background: #fee2e2; color: #dc2626;';
+                default:
+                    return 'background: var(--muted); color: var(--foreground);';
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            const searchInput = document.getElementById('search-patients');
+            if (searchInput) {
+                searchInput.addEventListener('input', searchPatients);
+            }
+        }
+
+        // Initialize page
+        function initPage() {
+            loadPatients();
+            setupEventListeners();
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+{% endblock %}

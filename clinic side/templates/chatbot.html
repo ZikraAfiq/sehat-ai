@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Medsync.ai - AI Health Assistant{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <!-- Chat Section -->
+    <div id="chat-section" class="section active">
+      <div class="card chat-container">
+        <div class="card-header">
+          <div class="card-description">
+            Get instant help with symptoms, appointments, and medication questions
+          </div>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div id="typing-indicator" class="message-typing hidden">
+          <i class="fas fa-robot"></i> AI Assistant is typing...
+        </div>
+        <div class="chat-input">
+          <input type="text" id="chat-input" placeholder="Type your health concern or question..."
+                 onkeypress="handleKeyPress(event)">
+          <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Medications Section -->
+    <div id="medication-section" class="section hidden">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <i class="fas fa-pills"></i>
+            <span>Medicine Tracker</span>
+          </div>
+          <div class="card-description">
+            Keep track of your medications and set reminders.
+          </div>
+        </div>
+        <div class="card-content">
+          <!-- Medication List -->
+          <div id="medications-container">
+            <p class="text-center">No medications added yet.</p>
+          </div>
+
+          <!-- Add Medication Form -->
+          <form id="medication-form" style="margin-top: 1.5rem;">
+            <div class="form-group">
+              <label for="medication-name">Medication Name</label>
+              <input type="text" id="medication-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="medication-dosage">Dosage</label>
+              <input type="text" id="medication-dosage" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label for="medication-time">Reminder Time</label>
+              <input type="time" id="medication-time" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-bell"></i> Add Reminder
+            </button>
+          </form>
+
+          <!-- Reminder Log -->
+          <div style="margin-top: 2rem;">
+            <h3><i class="fas fa-history"></i> Reminder Log</h3>
+            <div id="reminder-history" class="mt-4">
+              <p class="text-center">No reminders yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Appointment Popup Modal -->
+  <div id="appointment-modal" class="modal hidden">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal()">&times;</span>
+      <h2><i class="fas fa-calendar-plus"></i> Book an Appointment</h2>
+      <form id="appointment-popup-form">
+        <div class="form-group">
+          <label for="appointment-date">Choose a date</label>
+          <input type="date" id="appointment-date" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="appointment-time">Choose a time</label>
+          <input type="time" id="appointment-time" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label for="reason">Reason for Visit</label>
+          <textarea id="reason" class="form-control" rows="3" placeholder="Describe your symptoms"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-check-circle"></i> Confirm Appointment
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Success Notification -->
+  <div id="appointment-notification" class="notification hidden">
+    <i class="fas fa-check-circle"></i>
+    <span id="appointment-notification-text"></span>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div id="loading-indicator" class="loading-indicator hidden">
+    <div class="loading-spinner"></div>
+    <span>Loading...</span>
+  </div>
+
+  <!-- Notification -->
+  <div id="notification" class="notification">
+    <i class="fas fa-check-circle"></i>
+    <span id="notification-text"></span>
+  </div>
+{% endblock %}
