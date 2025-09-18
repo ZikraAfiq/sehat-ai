@@ -177,8 +177,8 @@
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script>
-        const API_BASE_URL = 'http://localhost:5001/api';
-
+        const API_BASE_URL = 'http://localhost:5000/api';
+    
         // Fetch data from API with error handling
         async function fetchData(endpoint) {
             try {
@@ -202,82 +202,69 @@
                 return null;
             }
         }
-
+    
         // Update statistics
         async function updateStats() {
             try {
-                const [patients, appointments] = await Promise.all([
-                    fetchData('/clinic/patients'),
-                    fetchData('/clinic/appointments')
-                ]);
-
-                if (patients) {
-                    document.getElementById('total-patients').textContent = patients.length;
-                    const totalMedications = patients.reduce((sum, p) => sum + (p.total_medications || 0), 0);
-                    document.getElementById('active-medications').textContent = totalMedications;
-                }
-
-                if (appointments) {
-                    document.getElementById('total-appointments').textContent = appointments.length;
-                    
-                    // Count today's appointments
-                    const today = new Date().toISOString().split('T')[0];
-                    const todayAppointments = appointments.filter(apt => 
-                        apt.appointment_date.startsWith(today)
-                    );
-                    document.getElementById('today-appointments').textContent = todayAppointments.length;
+                const stats = await fetchData('/dashboard/stats');
+                
+                if (stats) {
+                    document.getElementById('total-patients').textContent = stats.total_patients || 0;
+                    document.getElementById('total-appointments').textContent = stats.total_appointments || 0;
+                    document.getElementById('today-appointments').textContent = stats.today_appointments || 0;
+                    document.getElementById('active-medications').textContent = stats.active_medications || 0;
                 }
             } catch (error) {
                 console.error('Error updating stats:', error);
             }
         }
-
+    
         // Load recent appointments
         async function loadRecentAppointments() {
-            const appointments = await fetchData('/clinic/appointments');
+            const appointments = await fetchData('/dashboard/recent-appointments');
             const tbody = document.getElementById('recent-appointments');
             
             if (!appointments) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--destructive);">Failed to load appointments</td></tr>';
                 return;
             }
-
+    
             if (appointments.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--muted-foreground); font-style: italic;">No appointments found</td></tr>';
                 return;
             }
-
-            // Show only recent 10 appointments
-            const recentAppointments = appointments.slice(0, 10);
             
-            tbody.innerHTML = recentAppointments.map(apt => `
-                <tr style="border-bottom: 1px solid var(--border);">
-                    <td style="padding: 1rem; vertical-align: top;">
-                        <strong>${apt.patient_first_name} ${apt.patient_last_name}</strong><br>
-                        <small style="color: var(--muted-foreground)">${apt.patient_email}</small>
-                    </td>
-                    <td style="padding: 1rem; vertical-align: top;">
-                        Dr. ${apt.doctor_first_name} ${apt.doctor_last_name}<br>
-                        <small style="color: var(--muted-foreground)">${apt.specialization}</small>
-                    </td>
-                    <td style="padding: 1rem; vertical-align: top;">
-                        ${new Date(apt.appointment_date).toLocaleDateString()}<br>
-                        <small style="color: var(--muted-foreground)">${new Date(apt.appointment_date).toLocaleTimeString()}</small>
-                    </td>
-                    <td style="padding: 1rem; vertical-align: top;">
-                        <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; text-transform: capitalize; ${getStatusStyle(apt.status)}">${apt.status}</span>
-                    </td>
-                    <td style="padding: 1rem; vertical-align: top;">
-                        <select onchange="updateAppointmentStatus(${apt.appointment_id}, this.value)" style="background: var(--muted); color: var(--foreground); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: var(--radius); font-size: 0.875rem; cursor: pointer;">
-                            <option value="scheduled" ${apt.status === 'scheduled' ? 'selected' : ''}>Scheduled</option>
-                            <option value="completed" ${apt.status === 'completed' ? 'selected' : ''}>Completed</option>
-                            <option value="cancelled" ${apt.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
-                        </select>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = appointments.map(apt => {
+                const appointmentDate = new Date(apt.appointment_date);
+                return `
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <strong>${apt.patient_first_name} ${apt.patient_last_name}</strong><br>
+                            <small style="color: var(--muted-foreground)">ID: ${apt.patient_id}</small>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            Dr. ${apt.doctor_first_name} ${apt.doctor_last_name}<br>
+                            <small style="color: var(--muted-foreground)">${apt.specialization}</small>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            ${appointmentDate.toLocaleDateString()}<br>
+                            <small style="color: var(--muted-foreground)">${appointmentDate.toLocaleTimeString()}</small>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <span style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; text-transform: capitalize; ${getStatusStyle(apt.status)}">${apt.status}</span>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <select onchange="updateAppointmentStatus(${apt.appointment_id}, this.value)" style="background: var(--muted); color: var(--foreground); border: 1px solid var(--border); padding: 0.5rem 1rem; border-radius: var(--radius); font-size: 0.875rem; cursor: pointer;">
+                                <option value="scheduled" ${apt.status === 'scheduled' ? 'selected' : ''}>Scheduled</option>
+                                <option value="completed" ${apt.status === 'completed' ? 'selected' : ''}>Completed</option>
+                                <option value="cancelled" ${apt.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
-
+    
         // Get status badge styling
         function getStatusStyle(status) {
             switch(status) {
@@ -291,81 +278,78 @@
                     return 'background: var(--muted); color: var(--foreground);';
             }
         }
-
+    
         // Load patients overview
         async function loadPatientsOverview() {
-            const patients = await fetchData('/clinic/patients');
+            const patients = await fetchData('/dashboard/patients-overview');
             const tbody = document.getElementById('patients-table');
             
             if (!patients) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--destructive);">Failed to load patients</td></tr>';
                 return;
             }
-
+    
             if (patients.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--muted-foreground); font-style: italic;">No patients found</td></tr>';
                 return;
             }
-
-            tbody.innerHTML = patients.map(patient => `
-                <tr style="border-bottom: 1px solid var(--border);">
-                    <td style="padding: 1rem; vertical-align: top;">
-                        <strong>${patient.first_name} ${patient.last_name}</strong><br>
-                        <small style="color: var(--muted-foreground)">DOB: ${patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A'}</small>
-                    </td>
-                    <td style="padding: 1rem; vertical-align: top;">${patient.email}</td>
-                    <td style="padding: 1rem; vertical-align: top;">${patient.phone || 'N/A'}</td>
-                    <td style="padding: 1rem; vertical-align: top;">${patient.total_appointments || 0}</td>
-                    <td style="padding: 1rem; vertical-align: top;">${patient.total_medications || 0}</td>
-                    <td style="padding: 1rem; vertical-align: top;">
-                        <a href="{{ url_for('clinic_patients') }}?patient_id=${patient.patient_id}" class="btn btn-primary">
-                            <i class="fas fa-eye"></i> View Details
-                        </a>
-                    </td>
-                </tr>
-            `).join('');
+    
+            tbody.innerHTML = patients.map(patient => {
+                const dob = patient.dob ? new Date(patient.dob).toLocaleDateString() : 'N/A';
+                return `
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <strong>${patient.first_name} ${patient.last_name}</strong><br>
+                            <small style="color: var(--muted-foreground)">DOB: ${dob}</small>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">${patient.email}</td>
+                        <td style="padding: 1rem; vertical-align: top;">${patient.phone || 'N/A'}</td>
+                        <td style="padding: 1rem; vertical-align: top;">${patient.total_appointments || 0}</td>
+                        <td style="padding: 1rem; vertical-align: top;">${patient.total_medications || 0}</td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <a href="/clinic/patients?patient_id=${patient.patient_id}" class="btn btn-primary">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
-
+    
         // Load recent activity
         async function loadRecentActivity() {
-            const appointments = await fetchData('/clinic/appointments');
+            const activities = await fetchData('/dashboard/recent-activity');
             const activityDiv = document.getElementById('recent-activity');
             
-            if (!appointments) {
+            if (!activities) {
                 activityDiv.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--destructive);">Failed to load activity</div>';
                 return;
             }
-
-            // Get recent activities (appointments)
-            const recentActivities = appointments
-                .slice(0, 8)
-                .map(apt => ({
-                    type: 'appointment',
-                    title: `Appointment ${apt.status}`,
-                    description: `${apt.patient_first_name} ${apt.patient_last_name} with Dr. ${apt.doctor_first_name} ${apt.doctor_last_name}`,
-                    time: new Date(apt.appointment_date).toLocaleString(),
-                    icon: apt.status === 'completed' ? 'check-circle' : 'calendar-alt'
-                }));
-
-            if (recentActivities.length === 0) {
+    
+            if (activities.length === 0) {
                 activityDiv.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--muted-foreground); font-style: italic;">No recent activity</div>';
                 return;
             }
-
-            activityDiv.innerHTML = recentActivities.map(activity => `
-                <div style="display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--border);">
-                    <div style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; background: var(--primary);">
-                        <i class="fas fa-${activity.icon}"></i>
+    
+            activityDiv.innerHTML = activities.map(activity => {
+                const activityTime = new Date(activity.time);
+                const icon = activity.status === 'completed' ? 'check-circle' : 'calendar-alt';
+                
+                return `
+                    <div style="display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--border);">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; color: white; flex-shrink: 0; background: var(--primary);">
+                            <i class="fas fa-${icon}"></i>
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: var(--foreground); margin-bottom: 0.25rem;">${activity.title}</div>
+                            <div style="color: var(--muted-foreground); font-size: 0.875rem; margin-bottom: 0.25rem;">${activity.description}</div>
+                            <div style="color: var(--muted-foreground); font-size: 0.75rem;">${activityTime.toLocaleString()}</div>
+                        </div>
                     </div>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 600; color: var(--foreground); margin-bottom: 0.25rem;">${activity.title}</div>
-                        <div style="color: var(--muted-foreground); font-size: 0.875rem; margin-bottom: 0.25rem;">${activity.description}</div>
-                        <div style="color: var(--muted-foreground); font-size: 0.75rem;">${activity.time}</div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
-
+    
         // Update appointment status
         async function updateAppointmentStatus(appointmentId, newStatus) {
             try {
@@ -376,7 +360,7 @@
                     },
                     body: JSON.stringify({ status: newStatus })
                 });
-
+    
                 if (response.ok) {
                     // Reload the appointments table
                     await loadRecentAppointments();
@@ -392,7 +376,7 @@
                 showNotification('Failed to update appointment status', false);
             }
         }
-
+    
         // Initialize dashboard
         async function initDashboard() {
             setLoading(true);
@@ -410,10 +394,10 @@
                 setLoading(false);
             }
         }
-
+    
         // Load data when page loads
         document.addEventListener('DOMContentLoaded', initDashboard);
-
+    
         // Refresh data every 30 seconds
         setInterval(initDashboard, 30000);
     </script>
