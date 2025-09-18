@@ -11,7 +11,7 @@
         </div>
     </div>
 
-    <!-- Appointment Modal -->
+    <!-- Fixed appointment modal structure and handlers -->
     <div id="appointment-modal" class="modal hidden">
         <div class="modal-content" style="max-width: 600px;">
             <span class="modal-close" onclick="closeAppointmentModal()">&times;</span>
@@ -232,6 +232,7 @@
         
         // Ensure modal is visible
         modal.classList.remove('hidden');
+        modal.style.display = 'flex';
         
         // Set minimum date to today
         const today = new Date().toISOString().split('T')[0];
@@ -279,7 +280,10 @@
         const apt = allAppointments.find(a => a.appointment_id === appointmentId);
         if (!apt) return;
         
-        document.getElementById('appointment-form').reset();
+        const modal = document.getElementById('appointment-modal');
+        const form = document.getElementById('appointment-form');
+        
+        form.reset();
         document.getElementById('appointment-modal-title').textContent = 'Edit Appointment';
         document.getElementById('appointment-id').value = apt.appointment_id;
         document.getElementById('patient-select').value = apt.patient_id;
@@ -295,7 +299,9 @@
         document.getElementById('status-select').value = apt.status;
         document.getElementById('reason').value = apt.reason || '';
         
-        document.getElementById('appointment-modal').classList.remove('hidden');
+        // Ensure modal is visible
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
     }
 
     async function saveAppointment(event) {
@@ -344,7 +350,9 @@
     
     function showDeleteConfirmation(appointmentId) {
         currentAppointmentIdToDelete = appointmentId;
-        document.getElementById('confirm-delete-modal').classList.remove('hidden');
+        const modal = document.getElementById('confirm-delete-modal');
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
     }
 
     async function confirmDeleteAppointment() {
@@ -367,6 +375,7 @@
         const modal = document.getElementById('appointment-modal');
         if (modal) {
             modal.classList.add('hidden');
+            modal.style.display = 'none';
             // Reset form when closing
             const form = document.getElementById('appointment-form');
             if (form) {
@@ -380,7 +389,11 @@
     }
     
     function closeConfirmDeleteModal() { 
-        document.getElementById('confirm-delete-modal').classList.add('hidden'); 
+        const modal = document.getElementById('confirm-delete-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
         currentAppointmentIdToDelete = null; 
     }
 
@@ -392,7 +405,6 @@
         const appointmentModal = document.getElementById('appointment-modal');
         const deleteModal = document.getElementById('confirm-delete-modal');
         
-        // Set up modal close when clicking outside
         if (appointmentModal) {
             appointmentModal.addEventListener('click', function(e) {
                 if (e.target === this) {
@@ -401,7 +413,6 @@
             });
         }
         
-        // Set up delete modal close when clicking outside
         if (deleteModal) {
             deleteModal.addEventListener('click', function(e) {
                 if (e.target === this) {
@@ -445,13 +456,6 @@
         loadInitialData().catch(error => {
             console.error('Error loading initial data:', error);
             showNotification('Failed to load appointments. Please refresh the page.', false);
-        });
-        
-        // Add click handler for the New Appointment button (in case it's dynamically added)
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('#add-appointment-btn')) {
-                showAddAppointmentModal();
-            }
         });
     });
 </script>
@@ -516,6 +520,47 @@
     
     .gap-2 {
         gap: 0.5rem;
+    }
+
+    /* Enhanced modal styles for better visibility */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    
+    .modal.hidden {
+        display: none !important;
+    }
+    
+    .modal-content {
+        background: var(--background);
+        border-radius: var(--radius);
+        padding: 2rem;
+        position: relative;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--muted-foreground);
+        transition: color 0.2s ease;
+    }
+    
+    .modal-close:hover {
+        color: var(--foreground);
     }
 </style>
 {% endblock %}

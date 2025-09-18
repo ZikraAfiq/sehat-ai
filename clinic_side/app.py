@@ -7,12 +7,12 @@ from psycopg2.extras import RealDictCursor
 import google.generativeai as genai
 import re, json, random
 from datetime import datetime
+import bcrypt
 
 # Load environment variables from a .env file
 load_dotenv()
 
 app = Flask(__name__)
-# Enable CORS for requests from the frontend which runs on a different origin
 CORS(app, supports_credentials=True, origins=["http://127.0.0.1:5500", "http://localhost:5000", "http://127.0.0.1:5001", "http://localhost:5001"]) 
 
 # ---------- Gemini AI Configuration ----------
@@ -26,14 +26,13 @@ else:
 DB_CONFIG = {
     "dbname": os.getenv("DB_NAME", "sehat"),
     "user": os.getenv("DB_USER", "postgres"),
-    "password": str(os.getenv("DB_PASSWORD", "1234")), # Password must be a string
+    "password": str(os.getenv("DB_PASSWORD", "1234")),
     "host": os.getenv("DB_HOST", "localhost"),
     "port": os.getenv("DB_PORT", "5432")
 }
 
 # ---------- Database Helper Functions ----------
 def get_db():
-    """Get a database connection from the pool."""
     if 'db' not in g:
         try:
             g.db = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
@@ -42,41 +41,12 @@ def get_db():
             return None
     return g.db
 
-def get_cursor():
-    """Get a database cursor."""
-    db = get_db()
-    if db:
-        return db.cursor()
-    return None
-
 def close_db(e=None):
-    """Close the database connection at the end of the request."""
     db = g.pop('db', None)
     if db is not None:
         db.close()
 
-def query_db(query, args=(), one=False):
-    """Query the database and return results."""
-    cur = get_cursor()
-    if not cur:
-        return None
-        
-    try:
-        cur.execute(query, args)
-        if query.strip().upper().startswith('SELECT'):
-            rv = cur.fetchall()
-            cur.close()
-            return (rv[0] if rv else None) if one else rv
-        else:
-            get_db().commit()
-            return cur.rowcount
-    except Exception as e:
-        print(f"Database error: {e}")
-        get_db().rollback()
-        return None
-
 # ---------- Routes ----------
-
 @app.route('/')
 def home():
     return render_template('index.html', title='HealthCare Assistant')
@@ -85,63 +55,17 @@ def home():
 def chatbot():
     return render_template('chatbot.html', title='AI Assistant')
 
-@app.route("/signup")
-def signup():
-    return render_template('signup.html')
-
-@app.route("/login")
-def login():
-    return render_template("login.html")
-
-@app.route("/contact")
-def contact():
-    return render_template("contact.html")
-
-@app.route("/appointments")
-def appointments():
-    return render_template("appointments.html")
-
 @app.route("/clinic")
 def clinic_dashboard():
-    return render_template("clinic_dashboard.html")
+    return render_template("index.html")
 
 @app.route("/clinic/patients")
 def clinic_patients():
-    # Fetch patients from the database
-    patients = query_db("""
-        SELECT id, first_name, last_name, email, phone, 
-               TO_CHAR(date_of_birth, 'YYYY-MM-DD') as date_of_birth,
-               gender, address
-        FROM patients
-        ORDER BY last_name, first_name
-    """)
-    
-    return render_template("clinic_patients.html", patients=patients or [])
+    return render_template("clinic_patients.html")
 
 @app.route("/clinic/appointments")
 def clinic_appointments():
-    # Fetch appointments with patient and doctor details
-    appointments = query_db("""
-        SELECT a.id, 
-               p.first_name || ' ' || p.last_name as patient_name,
-               d.first_name || ' ' || d.last_name as doctor_name,
-               a.appointment_date,
-               TO_CHAR(a.appointment_time, 'HH24:MI') as appointment_time,
-               a.status,
-               a.notes
-        FROM appointments a
-        LEFT JOIN patients p ON a.patient_id = p.id
-        LEFT JOIN doctors d ON a.doctor_id = d.id
-        WHERE a.appointment_date >= CURRENT_DATE
-        ORDER BY a.appointment_date, a.appointment_time
-    """)
-    
-    # Fetch doctors for the filter dropdown
-    doctors = query_db("SELECT id, first_name, last_name FROM doctors ORDER BY last_name")
-    
-    return render_template("clinic_appointments.html", 
-                         appointments=appointments or [],
-                         doctors=doctors or [])
+    return render_template("clinic_appointments.html")
 
 # ---------- API Routes ----------
 
@@ -149,179 +73,284 @@ def clinic_appointments():
 @app.route('/api/chat', methods=['POST'])
 def chat():
     if not GEMINI_API_KEY:
-        return jsonify({"text": "AI Assistant is currently unavailable. Please check the server configuration."}), 503
-
+        return jsonify({"text": "AI Assistant is currently unavailable."}), 503
     user_message = request.json.get('message')
     if not user_message:
         return jsonify({"error": "No message provided"}), 400
-
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        
-        # Enhanced prompt for healthcare staff assistance
-        prompt = f"""You are an AI assistant designed to help hospital and clinic staff with their daily tasks. 
-        Your role is to assist with patient inquiries, appointment scheduling, medical record lookups, and general clinic operations.
-        
-        When responding to staff queries:
-        1. Be concise and professional
-        2. Use medical terminology appropriately
-        3. For patient-specific information, always verify patient identity first
-        4. Follow HIPAA guidelines for patient data
-        5. For medical emergencies, advise contacting emergency services immediately
-        
-        Common tasks you can assist with:
-        - Patient check-in/check-out procedures
-        - Appointment scheduling and management
-        - Basic medical information and triage guidance
-        - Clinic operating hours and services
-        - Prescription refill requests
-        - Lab test result explanations (general information only)
-        - Medical coding and billing questions
-        - Equipment and supply information
-        
-        User's question/request: "{user_message}"
-        
-        If the request involves patient data, remind staff to verify patient identity and access privileges.
-        For any clinical decisions, always recommend consulting with a healthcare provider.
-        """
-        
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = f"You are a helpful AI assistant for a clinic. User asks: '{user_message}'"
         response = model.generate_content(prompt)
-        
-        # Process the response
-        ai_text = response.text if hasattr(response, 'text') else "I'm sorry, I couldn't process that request at the moment. Please try again later."
-        
-        return jsonify({"text": ai_text, "suggestions": [
-            "Check patient appointment", "Look up medical records", "Schedule follow-up",
-            "Clinic hours", "Prescription refill", "Emergency protocols"
-        ]})
-
+        ai_text = response.text
+        return jsonify({"text": ai_text})
     except Exception as e:
         print(f"Error with Gemini API: {e}")
         return jsonify({"error": "Failed to get response from AI assistant"}), 500
 
 ## Doctors Endpoint
-@app.route('/api/doctors', methods=['GET'])
-def get_doctors():
+@app.route('/api/clinic/doctors', methods=['GET'])
+def get_clinic_doctors():
+    conn = get_db()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT doctor_id, first_name, last_name, specialization FROM doctors ORDER BY last_name;")
+            doctors = cur.fetchall()
+        return jsonify(doctors)
+    except Exception as e:
+        print(f"Database Error: {e}")
+        return jsonify({"error": "Failed to fetch doctors"}), 500
+
+# ---------- CLINIC API ROUTES ----------
+
+## Patients Endpoints
+@app.route('/api/clinic/patients', methods=['GET', 'POST'])
+def clinic_handle_patients():
+    conn = get_db()
+    if not conn: return jsonify({"error": "Database connection failed"}), 500
+    try:
+        if request.method == 'GET':
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT p.patient_id, p.first_name, p.last_name, p.email, p.phone, TO_CHAR(p.dob, 'YYYY-MM-DD') as dob,
+                           COUNT(DISTINCT a.appointment_id) as total_appointments,
+                           COUNT(DISTINCT pr.prescription_id) as total_medications
+                    FROM patients p
+                    LEFT JOIN appointments a ON p.patient_id = a.patient_id
+                    LEFT JOIN prescriptions pr ON p.patient_id = pr.patient_id
+                    GROUP BY p.patient_id
+                    ORDER BY p.last_name, p.first_name;
+                """)
+                return jsonify(cur.fetchall())
+        elif request.method == 'POST':
+            data = request.get_json()
+            if not all([data.get('first_name'), data.get('last_name'), data.get('email')]):
+                return jsonify({"error": "First name, last name, and email are required"}), 400
+            password_hash = bcrypt.hashpw(data.get('password', 'default').encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            with conn.cursor() as cur:
+                cur.execute("SELECT patient_id FROM patients WHERE email = %s", (data['email'],))
+                if cur.fetchone(): return jsonify({"error": "Email already exists"}), 409
+                cur.execute("""
+                    INSERT INTO patients (first_name, last_name, email, password_hash, phone, dob) 
+                    VALUES (%s, %s, %s, %s, %s, %s) RETURNING patient_id;
+                """, (data['first_name'], data['last_name'], data['email'], password_hash, data.get('phone'), data.get('dob')))
+                patient_id = cur.fetchone()['patient_id']
+                conn.commit()
+            return jsonify({"message": "Patient added successfully!", "patient_id": patient_id}), 201
+    except Exception as e:
+        conn.rollback()
+        print(f"Database Error: {e}")
+        return jsonify({"error": "Failed to handle patients"}), 500
+
+@app.route('/api/clinic/patients/<int:patient_id>', methods=['GET', 'PUT', 'DELETE'])
+def clinic_handle_individual_patient(patient_id):
+    conn = get_db()
+    if not conn: return jsonify({"error": "Database connection failed"}), 500
+    try:
+        if request.method == 'GET':
+            with conn.cursor() as cur:
+                cur.execute("SELECT patient_id, first_name, last_name, email, phone, TO_CHAR(dob, 'YYYY-MM-DD') as dob FROM patients WHERE patient_id = %s", (patient_id,))
+                patient = cur.fetchone()
+                if not patient: return jsonify({"error": "Patient not found"}), 404
+                cur.execute("SELECT a.*, d.first_name as doctor_first_name, d.last_name as doctor_last_name, d.specialization FROM appointments a JOIN doctors d ON a.doctor_id = d.doctor_id WHERE a.patient_id = %s ORDER BY a.appointment_date DESC;", (patient_id,))
+                appointments = cur.fetchall()
+                cur.execute("SELECT * FROM prescriptions WHERE patient_id = %s ORDER BY created_at DESC", (patient_id,))
+                medications = cur.fetchall()
+                return jsonify({"patient": patient, "appointments": appointments, "medications": medications})
+        elif request.method == 'PUT':
+            data = request.get_json()
+            if not all([data.get('first_name'), data.get('last_name'), data.get('email')]):
+                return jsonify({"error": "First name, last name, and email are required"}), 400
+            with conn.cursor() as cur:
+                cur.execute("UPDATE patients SET first_name = %s, last_name = %s, email = %s, phone = %s, dob = %s WHERE patient_id = %s",
+                            (data['first_name'], data['last_name'], data['email'], data.get('phone'), data.get('dob'), patient_id))
+                conn.commit()
+            return jsonify({"message": "Patient updated successfully!"})
+        elif request.method == 'DELETE':
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM patients WHERE patient_id = %s", (patient_id,))
+                conn.commit()
+            return jsonify({"message": "Patient deleted successfully!"})
+    except Exception as e:
+        conn.rollback()
+        print(f"Database Error: {e}")
+        return jsonify({"error": "Failed to handle patient request"}), 500
+
+## Appointments Endpoints
+@app.route('/api/clinic/appointments', methods=['GET', 'POST'])
+def clinic_handle_appointments():
+    conn = get_db()
+    if not conn: return jsonify({"error": "Database connection failed"}), 500
+    try:
+        if request.method == 'GET':
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT a.appointment_id, a.appointment_date, a.reason, a.status,
+                           p.patient_id, p.first_name as patient_first_name, p.last_name as patient_last_name,
+                           d.doctor_id, d.first_name as doctor_first_name, d.last_name as doctor_last_name
+                    FROM appointments a
+                    JOIN patients p ON a.patient_id = p.patient_id
+                    JOIN doctors d ON a.doctor_id = d.doctor_id
+                    ORDER BY a.appointment_date DESC;
+                """)
+                return jsonify(cur.fetchall())
+        elif request.method == 'POST':
+            data = request.get_json()
+            if not all([data.get('patient_id'), data.get('doctor_id'), data.get('appointment_date')]):
+                return jsonify({"error": "Patient, doctor, and date are required"}), 400
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO appointments (patient_id, doctor_id, appointment_date, reason, status) 
+                    VALUES (%s, %s, %s, %s, 'scheduled') RETURNING appointment_id;
+                """, (data['patient_id'], data['doctor_id'], data['appointment_date'], data.get('reason')))
+                appointment_id = cur.fetchone()['appointment_id']
+                conn.commit()
+            return jsonify({"message": "Appointment created!", "appointment_id": appointment_id}), 201
+    except Exception as e:
+        conn.rollback()
+        print(f"Database Error: {e}")
+        return jsonify({"error": "Failed to handle appointments"}), 500
+
+@app.route('/api/clinic/appointments/<int:appointment_id>', methods=['PUT', 'PATCH', 'DELETE'])
+def clinic_handle_individual_appointment(appointment_id):
+    conn = get_db()
+    if not conn: return jsonify({"error": "Database connection failed"}), 500
+    try:
+        if request.method == 'PATCH':
+            data = request.get_json()
+            if data.get('status') not in ['scheduled', 'completed', 'cancelled']:
+                return jsonify({"error": "Invalid status"}), 400
+            with conn.cursor() as cur:
+                cur.execute("UPDATE appointments SET status = %s WHERE appointment_id = %s", (data['status'], appointment_id))
+                conn.commit()
+            return jsonify({"message": "Appointment status updated"})
+        elif request.method == 'PUT':
+            data = request.get_json()
+            if not all([data.get('patient_id'), data.get('doctor_id'), data.get('appointment_date')]):
+                return jsonify({"error": "Patient, doctor, and date are required"}), 400
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE appointments 
+                    SET patient_id = %s, doctor_id = %s, appointment_date = %s, reason = %s, status = %s
+                    WHERE appointment_id = %s
+                """, (data['patient_id'], data['doctor_id'], data['appointment_date'], data.get('reason'), data.get('status'), appointment_id))
+                conn.commit()
+            return jsonify({"message": "Appointment updated successfully!"})
+        elif request.method == 'DELETE':
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM appointments WHERE appointment_id = %s", (appointment_id,))
+                conn.commit()
+            return jsonify({"message": "Appointment deleted successfully!"})
+    except Exception as e:
+        conn.rollback()
+        print(f"Database Error: {e}")
+        return jsonify({"error": "Failed to handle appointment"}), 500
+
+# ---------- Dashboard Endpoints ----------
+
+@app.route('/api/dashboard/stats', methods=['GET'])
+def get_dashboard_stats():
     conn = get_db()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
     
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT doctor_id as id, first_name, last_name, specialization, phone, available_days, available_hours FROM doctors ORDER BY first_name;")
-            doctors = cur.fetchall()
-        return jsonify(doctors)
+            # Total patients
+            cur.execute("SELECT COUNT(*) as total FROM patients")
+            total_patients = cur.fetchone()['total']
+            
+            # Total appointments
+            cur.execute("SELECT COUNT(*) as total FROM appointments")
+            total_appointments = cur.fetchone()['total']
+            
+            # Today's appointments
+            today = datetime.now().date()
+            cur.execute("SELECT COUNT(*) as total FROM appointments WHERE DATE(appointment_date) = %s", (today,))
+            today_appointments = cur.fetchone()['total']
+            
+            # Active medications
+            cur.execute("SELECT COUNT(DISTINCT prescription_id) as total FROM prescriptions")
+            active_medications = cur.fetchone()['total']
+            
+            return jsonify({
+                "total_patients": total_patients,
+                "total_appointments": total_appointments,
+                "today_appointments": today_appointments,
+                "active_medications": active_medications
+            })
     except Exception as e:
         print(f"Database Error: {e}")
-        return jsonify({"error": "Failed to fetch doctors"}), 500
-    finally:
-        conn.close()
+        return jsonify({"error": "Failed to fetch dashboard stats"}), 500
 
-## Appointments Endpoint - Fixed duplicate route
-@app.route('/api/appointments', methods=['GET', 'POST'])
-def handle_appointments():
-    # For demo, assume patient_id = 1
-    patient_id = 1
-
-    conn = get_db()
-    if not conn:
-        return jsonify({"error": "Database connection failed"}), 500
-
-    try:
-        if request.method == 'GET':
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT appointment_id, appointment_date, reason, status "
-                    "FROM appointments WHERE patient_id = %s ORDER BY appointment_date ASC;",
-                    (patient_id,)
-                )
-                appointments = cur.fetchall()
-            return jsonify(appointments)
-
-        elif request.method == 'POST':
-            data = request.get_json()
-            doctor_id = data.get('doctor_id')
-            date = data.get('date')
-            time = data.get('time')
-            reason = data.get('reason')
-
-            if not all([doctor_id, date, time]):
-                return jsonify({"error": "Doctor, date, and time are required"}), 400
-
-            try:
-                appointment_datetime = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
-            except ValueError:
-                return jsonify({"error": "Invalid date or time format"}), 400
-
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO appointments (patient_id, doctor_id, appointment_date, reason) "
-                    "VALUES (%s, %s, %s, %s) RETURNING appointment_id;",
-                    (patient_id, doctor_id, appointment_datetime, reason)
-                )
-                appointment_id = cur.fetchone()['appointment_id']
-                conn.commit()
-            return jsonify({"message": "Appointment booked successfully!", "appointment_id": appointment_id}), 201
-
-    except Exception as e:
-        conn.rollback()
-        print(f"Database Error: {e}")
-        return jsonify({"error": "Failed to handle appointments"}), 500
-    finally:
-        conn.close()
-
-## Medications Endpoint
-@app.route('/api/medications', methods=['GET', 'POST'])
-def handle_medications():
+@app.route('/api/dashboard/recent-appointments', methods=['GET'])
+def get_recent_appointments():
     conn = get_db()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
     
-    # For this demo, we'll assume a logged-in user with patient_id = 1
-    patient_id = 1
-
     try:
-        if request.method == 'GET':
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT prescription_id as id, medication_name, dosage, frequency, reminder_times FROM prescriptions WHERE patient_id = %s ORDER BY created_at DESC;",
-                    (patient_id,)
-                )
-                medications = cur.fetchall()
-            return jsonify(medications)
-        
-        elif request.method == 'POST':
-            data = request.get_json()
-            medication_name = data.get('medication_name')
-            dosage = data.get('dosage')
-            frequency = data.get('frequency')
-            # Convert reminder_times list to a JSON string for the DB
-            reminder_times = json.dumps(data.get('reminder_times', []))
-
-            if not medication_name or not dosage:
-                return jsonify({"error": "Medication name and dosage are required"}), 400
-
-            with conn.cursor() as cur:
-                cur.execute(
-                    "INSERT INTO prescriptions (patient_id, medication_name, dosage, frequency, reminder_times) VALUES (%s, %s, %s, %s, %s) RETURNING prescription_id;",
-                    (patient_id, medication_name, dosage, frequency, reminder_times)
-                )
-                new_id = cur.fetchone()['prescription_id']
-                conn.commit()
-            return jsonify({"message": "Medication added successfully!", "id": new_id, "medication_id": new_id}), 201
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT a.appointment_id, a.appointment_date, a.status, a.reason,
+                       p.patient_id, p.first_name as patient_first_name, p.last_name as patient_last_name,
+                       d.doctor_id, d.first_name as doctor_first_name, d.last_name as doctor_last_name,
+                       d.specialization
+                FROM appointments a
+                JOIN patients p ON a.patient_id = p.patient_id
+                JOIN doctors d ON a.doctor_id = d.doctor_id
+                ORDER BY a.appointment_date DESC
+                LIMIT 10
+            """)
+            appointments = cur.fetchall()
             
+            # Convert datetime objects to strings for JSON serialization
+            for apt in appointments:
+                if apt['appointment_date']:
+                    apt['appointment_date'] = apt['appointment_date'].isoformat()
+            
+            return jsonify(appointments)
     except Exception as e:
-        conn.rollback()
         print(f"Database Error: {e}")
-        return jsonify({"error": "An error occurred with medications"}), 500
-    finally:
-        conn.close()
+        return jsonify({"error": "Failed to fetch recent appointments"}), 500
 
-# ---------- CLINIC API ROUTES ----------
+@app.route('/api/dashboard/recent-activity', methods=['GET'])
+def get_recent_activity():
+    conn = get_db()
+    if not conn:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        with conn.cursor() as cur:
+            # Get recent appointments as activity
+            cur.execute("""
+                SELECT 
+                    'appointment' as type,
+                    a.appointment_date as time,
+                    CONCAT('Appointment ', a.status) as title,
+                    CONCAT(p.first_name, ' ', p.last_name, ' with Dr. ', d.first_name, ' ', d.last_name) as description,
+                    a.status
+                FROM appointments a
+                JOIN patients p ON a.patient_id = p.patient_id
+                JOIN doctors d ON a.doctor_id = d.doctor_id
+                ORDER BY a.appointment_date DESC
+                LIMIT 8
+            """)
+            activities = cur.fetchall()
+            
+            # Convert datetime objects to strings
+            for activity in activities:
+                if activity['time']:
+                    activity['time'] = activity['time'].isoformat()
+            
+            return jsonify(activities)
+    except Exception as e:
+        print(f"Database Error: {e}")
+        return jsonify({"error": "Failed to fetch recent activity"}), 500
 
-## Get all patients for clinic dashboard
-@app.route('/api/clinic/patients', methods=['GET'])
-def get_all_patients():
+@app.route('/api/dashboard/patients-overview', methods=['GET'])
+def get_patients_overview():
     conn = get_db()
     if not conn:
         return jsonify({"error": "Database connection failed"}), 500
@@ -330,143 +359,27 @@ def get_all_patients():
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT p.patient_id, p.first_name, p.last_name, p.email, p.phone, p.dob,
-                       COUNT(a.appointment_id) as total_appointments,
-                       COUNT(pr.prescription_id) as total_medications
+                       COUNT(DISTINCT a.appointment_id) as total_appointments,
+                       COUNT(DISTINCT pr.prescription_id) as total_medications
                 FROM patients p
                 LEFT JOIN appointments a ON p.patient_id = a.patient_id
                 LEFT JOIN prescriptions pr ON p.patient_id = pr.patient_id
-                GROUP BY p.patient_id, p.first_name, p.last_name, p.email, p.phone, p.dob
-                ORDER BY p.last_name, p.first_name;
+                GROUP BY p.patient_id
+                ORDER BY p.last_name, p.first_name
             """)
             patients = cur.fetchall()
-        return jsonify(patients)
+            
+            # Convert date objects to strings
+            for patient in patients:
+                if patient['dob']:
+                    patient['dob'] = patient['dob'].isoformat()
+            
+            return jsonify(patients)
     except Exception as e:
         print(f"Database Error: {e}")
-        return jsonify({"error": "Failed to fetch patients"}), 500
-    finally:
-        conn.close()
+        return jsonify({"error": "Failed to fetch patients overview"}), 500
 
-## Get all appointments for clinic dashboard
-@app.route('/api/clinic/appointments', methods=['GET'])
-def get_all_appointments():
-    conn = get_db()
-    if not conn:
-        return jsonify({"error": "Database connection failed"}), 500
-    
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT a.appointment_id, a.appointment_date, a.reason, a.status,
-                       p.first_name as patient_first_name, p.last_name as patient_last_name,
-                       p.email as patient_email, p.phone as patient_phone,
-                       d.first_name as doctor_first_name, d.last_name as doctor_last_name,
-                       d.specialization
-                FROM appointments a
-                JOIN patients p ON a.patient_id = p.patient_id
-                JOIN doctors d ON a.doctor_id = d.doctor_id
-                ORDER BY a.appointment_date DESC;
-            """)
-            appointments = cur.fetchall()
-        return jsonify(appointments)
-    except Exception as e:
-        print(f"Database Error: {e}")
-        return jsonify({"error": "Failed to fetch appointments"}), 500
-    finally:
-        conn.close()
-
-## Get patient details by ID
-@app.route('/api/clinic/patients/<int:patient_id>', methods=['GET'])
-def get_patient_details(patient_id):
-    conn = get_db()
-    if not conn:
-        return jsonify({"error": "Database connection failed"}), 500
-    
-    try:
-        with conn.cursor() as cur:
-            # Get patient basic info
-            cur.execute("SELECT * FROM patients WHERE patient_id = %s", (patient_id,))
-            patient = cur.fetchone()
-            
-            if not patient:
-                return jsonify({"error": "Patient not found"}), 404
-            
-            # Get patient appointments
-            cur.execute("""
-                SELECT a.*, d.first_name as doctor_first_name, d.last_name as doctor_last_name,
-                       d.specialization
-                FROM appointments a
-                JOIN doctors d ON a.doctor_id = d.doctor_id
-                WHERE a.patient_id = %s
-                ORDER BY a.appointment_date DESC;
-            """, (patient_id,))
-            appointments = cur.fetchall()
-            
-            # Get patient medications
-            cur.execute("SELECT * FROM prescriptions WHERE patient_id = %s ORDER BY created_at DESC", (patient_id,))
-            medications = cur.fetchall()
-            
-            return jsonify({
-                "patient": patient,
-                "appointments": appointments,
-                "medications": medications
-            })
-            
-    except Exception as e:
-        print(f"Database Error: {e}")
-        return jsonify({"error": "Failed to fetch patient details"}), 500
-    finally:
-        conn.close()
-
-## Update appointment status
-@app.route('/api/clinic/appointments/<int:appointment_id>', methods=['PATCH'])
-def update_appointment_status(appointment_id):
-    conn = get_db()
-    if not conn:
-        return jsonify({"error": "Database connection failed"}), 500
-    
-    try:
-        data = request.get_json()
-        status = data.get('status')
-        
-        if status not in ['scheduled', 'completed', 'cancelled']:
-            return jsonify({"error": "Invalid status"}), 400
-            
-        with conn.cursor() as cur:
-            cur.execute(
-                "UPDATE appointments SET status = %s WHERE appointment_id = %s",
-                (status, appointment_id)
-            )
-            conn.commit()
-            
-        return jsonify({"message": "Appointment status updated successfully"})
-        
-    except Exception as e:
-        conn.rollback()
-        print(f"Database Error: {e}")
-        return jsonify({"error": "Failed to update appointment status"}), 500
-    finally:
-        conn.close()
-
-# Register the close_db function to be called when the app context is torn down
 app.teardown_appcontext(close_db)
 
-# Initialize the database tables if they don't exist
-def init_db():
-    with app.app_context():
-        db = get_db()
-        if db:
-            try:
-                with app.open_resource('schema.sql', mode='r') as f:
-                    db.cursor().execute(f.read())
-                db.commit()
-                print("✅ Database tables initialized successfully")
-            except Exception as e:
-                print(f"❌ Error initializing database: {e}")
-
-# Initialize the database when the app starts
-init_db()
-
-# ---------- Main Execution Block ----------
 if __name__ == "__main__":
-    # The frontend expects the server on port 5000
     app.run(debug=True, port=5000)

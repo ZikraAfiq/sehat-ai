@@ -9,9 +9,9 @@
         <p style="color: var(--muted-foreground); font-size: 1.1rem;">View, add, edit, and delete patient records</p>
     </div>
 
+    <!-- Fixed modal structure and onclick handlers -->
     <div id="patient-modal" class="modal hidden">
         <div class="modal-content" style="max-width: 600px; width: 90%;">
-            <!-- Fixed the onclick function to call closePatientModal -->
             <span class="modal-close" onclick="closePatientModal()">&times;</span>
             <form id="patient-form">
                 <h2 id="modal-title" style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1.5rem;">Add New Patient</h2>
@@ -45,7 +45,6 @@
                     <input type="password" id="password" name="password" class="form-control" placeholder="Required for new patients">
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 1rem;">
-                    <!-- Fixed the cancel button to call closePatientModal -->
                     <button type="button" id="cancel-patient-btn" class="btn btn-secondary" onclick="closePatientModal()">Cancel</button>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Patient</button>
                 </div>
@@ -178,12 +177,23 @@
     }
     
     function showAddPatientModal() {
-        document.getElementById('patient-form').reset();
+        const modal = document.getElementById('patient-modal');
+        const form = document.getElementById('patient-form');
+        
+        if (!modal || !form) {
+            console.error('Modal or form element not found');
+            return;
+        }
+        
+        form.reset();
         document.getElementById('modal-title').textContent = 'Add New Patient';
         document.getElementById('patient-id').value = '';
         document.getElementById('password').required = true;
         document.getElementById('password').placeholder = 'Required for new patients';
-        document.getElementById('patient-modal').classList.remove('hidden');
+        
+        // Ensure modal is visible
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
         
         // Focus on the first input field for better UX
         setTimeout(() => {
@@ -196,7 +206,10 @@
         const patient = allPatients.find(p => p.patient_id === patientId);
         if (!patient) return;
         
-        document.getElementById('patient-form').reset();
+        const modal = document.getElementById('patient-modal');
+        const form = document.getElementById('patient-form');
+        
+        form.reset();
         document.getElementById('modal-title').textContent = 'Edit Patient';
         document.getElementById('patient-id').value = patient.patient_id;
         document.getElementById('first-name').value = patient.first_name;
@@ -206,7 +219,10 @@
         document.getElementById('dob').value = patient.dob || '';
         document.getElementById('password').required = false;
         document.getElementById('password').placeholder = 'Leave blank to keep current password';
-        document.getElementById('patient-modal').classList.remove('hidden');
+        
+        // Ensure modal is visible
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
     }
 
     async function savePatient(event) {
@@ -271,6 +287,7 @@
         const modal = document.getElementById('confirm-delete-modal');
         if (modal) {
             modal.classList.remove('hidden');
+            modal.style.display = 'flex';
             
             // Focus on the Cancel button for better keyboard navigation
             const cancelBtn = modal.querySelector('.btn-secondary');
@@ -300,6 +317,7 @@
         const modal = document.getElementById('patient-modal');
         if (modal) {
             modal.classList.add('hidden');
+            modal.style.display = 'none';
             // Reset form when closing
             const form = document.getElementById('patient-form');
             if (form) {
@@ -309,7 +327,11 @@
     }
 
     function closeConfirmDeleteModal() {
-        document.getElementById('confirm-delete-modal').classList.add('hidden');
+        const modal = document.getElementById('confirm-delete-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
         currentPatientIdToDelete = null;
     }
 
@@ -332,7 +354,6 @@
             });
         }
         
-        // Close modal when clicking outside the modal content
         const patientModal = document.getElementById('patient-modal');
         const deleteModal = document.getElementById('confirm-delete-modal');
         
@@ -355,9 +376,9 @@
         // Close modals when pressing Escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                if (!patientModal.classList.contains('hidden')) {
+                if (patientModal && !patientModal.classList.contains('hidden')) {
                     closePatientModal();
-                } else if (!deleteModal.classList.contains('hidden')) {
+                } else if (deleteModal && !deleteModal.classList.contains('hidden')) {
                     closeConfirmDeleteModal();
                 }
             }
@@ -412,6 +433,46 @@
     .gap-2 {
         gap: 0.5rem;
     }
+
+    /* Enhanced modal styles for better visibility */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    
+    .modal.hidden {
+        display: none !important;
+    }
+    
+    .modal-content {
+        background: var(--background);
+        border-radius: var(--radius);
+        padding: 2rem;
+        position: relative;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--muted-foreground);
+        transition: color 0.2s ease;
+    }
+    
+    .modal-close:hover {
+        color: var(--foreground);
+    }
 </style>
 {% endblock %}
-    
