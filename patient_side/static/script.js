@@ -554,14 +554,15 @@ function removeMedication(medicationId) {
 }
 
 // Placeholder for reminder history functionality
-function loadReminders() {
-    // In a real app, this would fetch reminder history from an API.
-    const container = document.getElementById('reminder-history');
-    if (container) {
-        // Initially, the HTML content serves as the default state.
-        // container.innerHTML = '<p class="text-center">No reminders set yet</p>';
-    }
-}
+// function loadReminders() {
+//     console.log("ji")
+//     // In a real app, this would fetch reminder history from an API.
+//     const container = document.getElementById('reminder-history');
+//     if (container) {
+//         // Initially, the HTML content serves as the default state.
+//         // container.innerHTML = '<p class="text-center">No reminders set yet</p>';
+//     }
+// }
 
 // Setup event listeners
 function setupEventListeners() {

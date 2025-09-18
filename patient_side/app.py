@@ -487,6 +487,39 @@ def update_appointment_status(appointment_id):
     finally:
         conn.close()
 
+@app.route('/api/reminders', methods=['GET'])
+def get_all_reminders():
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({"error": "Database connection failed"}), 500
+    
+    try:
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor.execute("""
+            SELECT 
+                r.reminder_id,
+                r.prescription_id,
+                r.reminder_time,
+                r.status,
+                p.medication_name,
+                p.dosage
+            FROM reminders r
+            JOIN prescriptions p ON r.prescription_id = p.prescription_id
+            ORDER BY r.reminder_time ASC
+        """)
+        reminders = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return jsonify(reminders), 200
+    except Exception as e:
+        print("Error fetching reminders:", e)
+        return jsonify({"error": "Failed to fetch reminders"}), 500
+
+
+
+
+
+
 @app.route('/api/prescriptions', methods=['GET'])
 def get_all_prescriptions():
     conn = get_db_connection()
